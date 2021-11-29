@@ -19,6 +19,7 @@ function getDataToWorkerAgent(worker) {
     const command = e.data;
     if (typeof command === 'string' || command instanceof String){
       //move(command);
+
     }
     console.log('Message received from worker');
   }

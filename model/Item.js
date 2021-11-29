@@ -1,7 +1,7 @@
 class Item {
   constructor(label  = "", size = 1, isControllable=false,
               isDangerous=false, isMoving=false, isARoad=false,
-              isAFood=false, position={x:-1,y:-1}) {
+              isAFood=false, position={x:-1,y:-1,pbody:[]}) {
     this.label = label;
     this.size = size;
     this.isControllable = isControllable;

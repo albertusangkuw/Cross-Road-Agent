@@ -553,19 +553,20 @@ function animate(timestamp) {
 
   // Hit test
 
-  if(lanes[currentLane].type === 'Car_Lane' || lanes[currentLane].type === 'Truck_Lane') {
-    const chickenMinX = chicken.position.x - chickenSize*zoom/2;
-    const chickenMaxX = chicken.position.x + chickenSize*zoom/2;
-    const vehicleLength = { Car_Lane: 60, Truck_Lane: 105}[lanes[currentLane].type];
-    lanes[currentLane].vehicle.forEach(vehicle => {
-      const carMinX = vehicle.position.x - vehicleLength*zoom/2;
-      const carMaxX = vehicle.position.x + vehicleLength*zoom/2;
-      if(chickenMaxX > carMinX && chickenMinX < carMaxX) {
-        gameOver = true;
-        endDOM.style.visibility = 'visible';
-      }
-    });
-  }
+  //
+  // if(lanes[currentLane].type === 'Car_Lane' || lanes[currentLane].type === 'Truck_Lane') {
+  //   const chickenMinX = chicken.position.x - chickenSize*zoom/2;
+  //   const chickenMaxX = chicken.position.x + chickenSize*zoom/2;
+  //   const vehicleLength = { Car_Lane: 60, Truck_Lane: 105}[lanes[currentLane].type];
+  //   lanes[currentLane].vehicle.forEach(vehicle => {
+  //     const carMinX = vehicle.position.x - vehicleLength*zoom/2;
+  //     const carMaxX = vehicle.position.x + vehicleLength*zoom/2;
+  //     if(chickenMaxX > carMinX && chickenMinX < carMaxX) {
+  //       gameOver = true;
+  //       endDOM.style.visibility = 'visible';
+  //     }
+  //   });
+  // }
 
   renderer.render(scene, camera);
 }
