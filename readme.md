@@ -17,7 +17,7 @@ Agen Player : Rubah yang berjalan melintasi rintangan berupa
 manusia, kendaraan, dan air untuk mencapai finish line
 Win Condition : Ketika berhasil mencapai finish line
 Lose Condition : Ketika nyawa player habis
-Algoritma : A*, minimax, CSP (dapat berubah)
+Algoritma : A*, CSP (dapat berubah)
 </p>
 
 ![crossy road](https://user-images.githubusercontent.com/15321738/89792114-c0aad600-db41-11ea-92de-437b0aae65a1.PNG)
