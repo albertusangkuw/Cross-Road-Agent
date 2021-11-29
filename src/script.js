@@ -104,7 +104,8 @@ scene.add(backLight);
 const laneTypes = ["car", "truck", "forest"];
 const laneSpeeds = [2, 2.5, 3];
 const vechicleColors = [0x428eff, 0xffef42, 0xff7b42, 0xff426b];
-const threeHeights = [20, 45, 60];
+const treeHeights = [20, 45, 60];
+
 
 const initaliseValues = () => {
   lanes = generateLanes();
@@ -165,6 +166,7 @@ function Car() {
   const car = new THREE.Group();
   const color = vechicleColors[Math.floor(Math.random() * vechicleColors.length)];
 
+  car.name = "Car_Vehicle";
   const main = new THREE.Mesh(new THREE.BoxBufferGeometry(60 * zoom, 30 * zoom, 15 * zoom), new THREE.MeshPhongMaterial({ color, flatShading: true }));
   main.position.z = 12 * zoom;
   main.castShadow = true;
@@ -203,6 +205,7 @@ function Truck() {
   const truck = new THREE.Group();
   const color = vechicleColors[Math.floor(Math.random() * vechicleColors.length)];
 
+  truck.name = "Truck_Vehicle";
   const base = new THREE.Mesh(new THREE.BoxBufferGeometry(100 * zoom, 25 * zoom, 5 * zoom), new THREE.MeshLambertMaterial({ color: 0xb4c6fc, flatShading: true }));
   base.position.z = 10 * zoom;
   truck.add(base);
@@ -243,29 +246,29 @@ function Truck() {
   return truck;
 }
 
-function Three() {
-  const three = new THREE.Group();
-
+function Tree() {
+  const tree = new THREE.Group();
+  tree.name = "Tree";
   const trunk = new THREE.Mesh(new THREE.BoxBufferGeometry(15 * zoom, 15 * zoom, 20 * zoom), new THREE.MeshPhongMaterial({ color: 0x4d2926, flatShading: true }));
   trunk.position.z = 10 * zoom;
   trunk.castShadow = true;
   trunk.receiveShadow = true;
-  three.add(trunk);
+  tree.add(trunk);
 
-  height = threeHeights[Math.floor(Math.random() * threeHeights.length)];
+  height = treeHeights[Math.floor(Math.random() * treeHeights.length)];
 
   const crown = new THREE.Mesh(new THREE.BoxBufferGeometry(30 * zoom, 30 * zoom, height * zoom), new THREE.MeshLambertMaterial({ color: 0x7aa21d, flatShading: true }));
   crown.position.z = (height / 2 + 20) * zoom;
   crown.castShadow = true;
   crown.receiveShadow = false;
-  three.add(crown);
+  tree.add(crown);
 
-  return three;
+  return tree;
 }
 
 function Chicken() {
   const chicken = new THREE.Group();
-
+  chicken.name = "Chicken";
   const body = new THREE.Mesh(new THREE.BoxBufferGeometry(chickenSize * zoom, chickenSize * zoom, 20 * zoom), new THREE.MeshPhongMaterial({ color: 0xffffff, flatShading: true }));
   body.position.z = 10 * zoom;
   body.castShadow = true;
@@ -283,7 +286,7 @@ function Chicken() {
 
 function Road() {
   const road = new THREE.Group();
-
+  road.name = "Road";
   const createSection = (color) => new THREE.Mesh(new THREE.PlaneBufferGeometry(boardWidth * zoom, positionWidth * zoom), new THREE.MeshPhongMaterial({ color }));
 
   const middle = createSection(0x454a59);
@@ -303,7 +306,7 @@ function Road() {
 
 function Grass() {
   const grass = new THREE.Group();
-
+  grass.name = "Grass";
   const createSection = (color) => new THREE.Mesh(new THREE.BoxBufferGeometry(boardWidth * zoom, positionWidth * zoom, 3 * zoom), new THREE.MeshPhongMaterial({ color }));
 
   const middle = createSection(0x55f472);
@@ -336,16 +339,16 @@ function Lane(index) {
       this.mesh = new Grass();
 
       this.occupiedPositions = new Set();
-      this.threes = [1, 2, 3, 4].map(() => {
-        const three = new Three();
+      this.tree = [1, 2, 3, 4].map(() => {
+        const tree = new Tree();
         let position;
         do {
           position = Math.floor(Math.random() * columns);
         } while (this.occupiedPositions.has(position));
         this.occupiedPositions.add(position);
-        three.position.x = (position * positionWidth + positionWidth / 2) * zoom - (boardWidth * zoom) / 2;
-        this.mesh.add(three);
-        return three;
+        tree.position.x = (position * positionWidth + positionWidth / 2) * zoom - (boardWidth * zoom) / 2;
+        this.mesh.add(tree);
+        return tree;
       });
       break;
     }
@@ -354,17 +357,17 @@ function Lane(index) {
       this.direction = Math.random() >= 0.5;
 
       const occupiedPositions = new Set();
-      this.vechicles = [1, 2, 3].map(() => {
-        const vechicle = new Car();
+      this.vehicle  = [1, 2, 3].map(() => {
+        const vehicle = new Car();
         let position;
         do {
           position = Math.floor((Math.random() * columns) / 2);
         } while (occupiedPositions.has(position));
         occupiedPositions.add(position);
-        vechicle.position.x = (position * positionWidth * 2 + positionWidth / 2) * zoom - (boardWidth * zoom) / 2;
-        if (!this.direction) vechicle.rotation.z = Math.PI;
-        this.mesh.add(vechicle);
-        return vechicle;
+        vehicle.position.x = (position * positionWidth * 2 + positionWidth / 2) * zoom - (boardWidth * zoom) / 2;
+        if (!this.direction) vehicle.rotation.z = Math.PI;
+        this.mesh.add(vehicle);
+        return vehicle;
       });
 
       this.speed = laneSpeeds[Math.floor(Math.random() * laneSpeeds.length)];
@@ -375,19 +378,18 @@ function Lane(index) {
       this.direction = Math.random() >= 0.5;
 
       const occupiedPositions = new Set();
-      this.vechicles = [1, 2].map(() => {
-        const vechicle = new Truck();
+      this.vehicle = [1, 2].map(() => {
+        const vehicle = new Truck();
         let position;
         do {
           position = Math.floor((Math.random() * columns) / 3);
         } while (occupiedPositions.has(position));
         occupiedPositions.add(position);
-        vechicle.position.x = (position * positionWidth * 3 + positionWidth / 2) * zoom - (boardWidth * zoom) / 2;
-        if (!this.direction) vechicle.rotation.z = Math.PI;
-        this.mesh.add(vechicle);
-        return vechicle;
+        vehicle.position.x = (position * positionWidth * 3 + positionWidth / 2) * zoom - (boardWidth * zoom) / 2;
+        if (!this.direction) vehicle.rotation.z = Math.PI;
+        this.mesh.add(vehicle);
+        return vehicle;
       });
-
       this.speed = laneSpeeds[Math.floor(Math.random() * laneSpeeds.length)];
       break;
     }
@@ -423,7 +425,7 @@ window.addEventListener("keydown", (event) => {
     move("right");
   }
 });
-
+let finalPositionsLog = {};
 function move(direction) {
   const finalPositions = moves.reduce(
     (position, move) => {
@@ -453,6 +455,7 @@ function move(direction) {
     if (!stepStartTimestamp) startMoving = true;
   }
   moves.push(direction);
+  finalPositionsLog = finalPositions;
 }
 
 function animate(timestamp) {
@@ -467,11 +470,11 @@ function animate(timestamp) {
     if (lane.type === "car" || lane.type === "truck") {
       const aBitBeforeTheBeginingOfLane = (-boardWidth * zoom) / 2 - positionWidth * 2 * zoom;
       const aBitAfterTheEndOFLane = (boardWidth * zoom) / 2 + positionWidth * 2 * zoom;
-      lane.vechicles.forEach((vechicle) => {
+      lane.vehicle.forEach((vehicle) => {
         if (lane.direction) {
-          vechicle.position.x = vechicle.position.x < aBitBeforeTheBeginingOfLane ? aBitAfterTheEndOFLane : (vechicle.position.x -= (lane.speed / 16) * delta);
+          vehicle.position.x = vehicle.position.x < aBitBeforeTheBeginingOfLane ? aBitAfterTheEndOFLane : (vehicle.position.x -= (lane.speed / 16) * delta);
         } else {
-          vechicle.position.x = vechicle.position.x > aBitAfterTheEndOFLane ? aBitBeforeTheBeginingOfLane : (vechicle.position.x += (lane.speed / 16) * delta);
+          vehicle.position.x = vehicle.position.x > aBitAfterTheEndOFLane ? aBitBeforeTheBeginingOfLane : (vehicle.position.x += (lane.speed / 16) * delta);
         }
       });
     }
@@ -552,14 +555,14 @@ function animate(timestamp) {
   }
 
   // Hit test
-  /*
+
   if(lanes[currentLane].type === 'car' || lanes[currentLane].type === 'truck') {
     const chickenMinX = chicken.position.x - chickenSize*zoom/2;
     const chickenMaxX = chicken.position.x + chickenSize*zoom/2;
-    const vechicleLength = { car: 60, truck: 105}[lanes[currentLane].type]; 
-    lanes[currentLane].vechicles.forEach(vechicle => {
-      const carMinX = vechicle.position.x - vechicleLength*zoom/2;
-      const carMaxX = vechicle.position.x + vechicleLength*zoom/2;
+    const vehicleLength = { car: 60, truck: 105}[lanes[currentLane].type];
+    lanes[currentLane].vehicle.forEach(vehicle => {
+      const carMinX = vehicle.position.x - vehicleLength*zoom/2;
+      const carMaxX = vehicle.position.x + vehicleLength*zoom/2;
       if(chickenMaxX > carMinX && chickenMinX < carMaxX) {
         gameOver = true;
         endDOM.style.visibility = 'visible';
@@ -567,8 +570,89 @@ function animate(timestamp) {
     });
 
   }
-  */
+
   renderer.render(scene, camera);
+}
+
+let FinaltempStr = "";
+setInterval(function() {
+  FinaltempStr = "";
+  printStatsConsole(lanes);
+  console.log(FinaltempStr);
+  //console.log(chicken);
+}, 100);
+
+function printStatsConsole(lanes) {
+  FinaltempStr += "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" + "\n";
+  let tableTemp = [];
+  for (let i = lanes.length-1; i >=0 ; i--) {
+    //console.log(lanes[i]);
+    let tempArrStr = [];
+    let childLane = [];
+    let iconDebug = " ";
+    switch (lanes[i].type) {
+      case 'field' :{
+        iconDebug  = "_";
+        break;
+      }
+      case 'forest' :{
+        childLane = childLane.concat(lanes[i].tree);
+        iconDebug  = "_";
+        break;
+      }
+      case 'car':{
+        childLane = childLane.concat(lanes[i].vehicle);
+        iconDebug  = "-";
+        break;
+      }
+      case 'truck':{
+        childLane = childLane.concat(lanes[i].vehicle);
+        iconDebug  = "-";
+        break;
+      }
+      default :{
+        console.log("Error");
+        break;
+      }
+    }
+    for (let j = 0; j <columns ; j++) {
+      tempArrStr.push(iconDebug);
+    }
+
+    for (let j = 0; j < childLane.length; j++) {
+      const pos = Math.floor(-(((positionWidth-boardWidth-childLane[j].position.x)/zoom)/positionWidth));
+      switch (childLane[j].name) {
+        case 'Truck_Vehicle' : {
+          tempArrStr[pos] = "$";
+          break;
+        }
+        case 'Car_Vehicle' : {
+          tempArrStr[pos] = "$";
+          break;
+        }
+        case 'Tree' : {
+          tempArrStr[pos]  = "#";
+          break;
+        }
+        default :{
+          console.log("Error Default ");
+        }
+      }
+    }
+    tableTemp.push(tempArrStr);
+  }
+
+  tableTemp[tableTemp.length-currentLane-1][currentColumn] = "A";
+
+  for (let i = 0; i < tableTemp.length ; i++) {
+    let tempStr = "";
+    for (let j = 0; j <tableTemp[i].length ; j++) {
+      tempStr += tableTemp[i][j];
+    }
+    FinaltempStr += tempStr + "\n";
+  }
+  FinaltempStr += "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" + "\n";
+
 }
 
 requestAnimationFrame(animate);
