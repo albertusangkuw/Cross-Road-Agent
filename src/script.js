@@ -101,11 +101,10 @@ backLight.position.set(200, 200, 50);
 backLight.castShadow = true;
 scene.add(backLight);
 
-const laneTypes = ["car", "truck", "forest"];
+const laneTypes = ["Car_Lane", "Truck_Lane", "Forest_Lane"];
 const laneSpeeds = [2, 2.5, 3];
 const vechicleColors = [0x428eff, 0xffef42, 0xff7b42, 0xff426b];
 const treeHeights = [20, 45, 60];
-
 
 const initaliseValues = () => {
   lanes = generateLanes();
@@ -327,15 +326,14 @@ function Grass() {
 
 function Lane(index) {
   this.index = index;
-  this.type = index <= 0 ? "field" : laneTypes[Math.floor(Math.random() * laneTypes.length)];
+  this.type = index <= 0 ? "Field_Lane" : laneTypes[Math.floor(Math.random() * laneTypes.length)];
 
   switch (this.type) {
-    case "field": {
-      this.type = "field";
+    case "Field_Lane": {
       this.mesh = new Grass();
       break;
     }
-    case "forest": {
+    case "Forest_Lane": {
       this.mesh = new Grass();
 
       this.occupiedPositions = new Set();
@@ -352,12 +350,12 @@ function Lane(index) {
       });
       break;
     }
-    case "car": {
+    case "Car_Lane": {
       this.mesh = new Road();
       this.direction = Math.random() >= 0.5;
 
       const occupiedPositions = new Set();
-      this.vehicle  = [1, 2, 3].map(() => {
+      this.vehicle = [1, 2, 3].map(() => {
         const vehicle = new Car();
         let position;
         do {
@@ -373,7 +371,7 @@ function Lane(index) {
       this.speed = laneSpeeds[Math.floor(Math.random() * laneSpeeds.length)];
       break;
     }
-    case "truck": {
+    case "Truck_Lane": {
       this.mesh = new Road();
       this.direction = Math.random() >= 0.5;
 
@@ -436,22 +434,21 @@ function move(direction) {
     },
     { lane: currentLane, column: currentColumn }
   );
-
   if (direction === "forward") {
-    if (lanes[finalPositions.lane + 1].type === "forest" && lanes[finalPositions.lane + 1].occupiedPositions.has(finalPositions.column)) return;
+    if (lanes[finalPositions.lane + 1].type === "Forest_Lane" && lanes[finalPositions.lane + 1].occupiedPositions.has(finalPositions.column)) return;
     if (!stepStartTimestamp) startMoving = true;
     addLane();
   } else if (direction === "backward") {
     if (finalPositions.lane === 0) return;
-    if (lanes[finalPositions.lane - 1].type === "forest" && lanes[finalPositions.lane - 1].occupiedPositions.has(finalPositions.column)) return;
+    if (lanes[finalPositions.lane - 1].type === "Forest_Lane" && lanes[finalPositions.lane - 1].occupiedPositions.has(finalPositions.column)) return;
     if (!stepStartTimestamp) startMoving = true;
   } else if (direction === "left") {
     if (finalPositions.column === 0) return;
-    if (lanes[finalPositions.lane].type === "forest" && lanes[finalPositions.lane].occupiedPositions.has(finalPositions.column - 1)) return;
+    if (lanes[finalPositions.lane].type === "Forest_Lane" && lanes[finalPositions.lane].occupiedPositions.has(finalPositions.column - 1)) return;
     if (!stepStartTimestamp) startMoving = true;
   } else if (direction === "right") {
     if (finalPositions.column === columns - 1) return;
-    if (lanes[finalPositions.lane].type === "forest" && lanes[finalPositions.lane].occupiedPositions.has(finalPositions.column + 1)) return;
+    if (lanes[finalPositions.lane].type === "Forest_Lane" && lanes[finalPositions.lane].occupiedPositions.has(finalPositions.column + 1)) return;
     if (!stepStartTimestamp) startMoving = true;
   }
   moves.push(direction);
@@ -467,7 +464,7 @@ function animate(timestamp) {
 
   // Animate cars and trucks moving on the lane
   lanes.forEach((lane) => {
-    if (lane.type === "car" || lane.type === "truck") {
+    if (lane.type === "Car_Lane" || lane.type === "Truck_Lane") {
       const aBitBeforeTheBeginingOfLane = (-boardWidth * zoom) / 2 - positionWidth * 2 * zoom;
       const aBitAfterTheEndOFLane = (boardWidth * zoom) / 2 + positionWidth * 2 * zoom;
       lane.vehicle.forEach((vehicle) => {
@@ -556,10 +553,10 @@ function animate(timestamp) {
 
   // Hit test
 
-  if(lanes[currentLane].type === 'car' || lanes[currentLane].type === 'truck') {
+  if(lanes[currentLane].type === 'Car_Lane' || lanes[currentLane].type === 'Truck_Lane') {
     const chickenMinX = chicken.position.x - chickenSize*zoom/2;
     const chickenMaxX = chicken.position.x + chickenSize*zoom/2;
-    const vehicleLength = { car: 60, truck: 105}[lanes[currentLane].type];
+    const vehicleLength = { Car_Lane: 60, Truck_Lane: 105}[lanes[currentLane].type];
     lanes[currentLane].vehicle.forEach(vehicle => {
       const carMinX = vehicle.position.x - vehicleLength*zoom/2;
       const carMaxX = vehicle.position.x + vehicleLength*zoom/2;
@@ -568,91 +565,156 @@ function animate(timestamp) {
         endDOM.style.visibility = 'visible';
       }
     });
-
   }
 
   renderer.render(scene, camera);
 }
 
-let FinaltempStr = "";
-setInterval(function() {
-  FinaltempStr = "";
-  printStatsConsole(lanes);
-  console.log(FinaltempStr);
-  //console.log(chicken);
-}, 100);
-
-function printStatsConsole(lanes) {
-  FinaltempStr += "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" + "\n";
-  let tableTemp = [];
-  for (let i = lanes.length-1; i >=0 ; i--) {
-    //console.log(lanes[i]);
-    let tempArrStr = [];
+function apiGameEngine(lanes = lanes) {
+  let tableItems = [];
+  for (let i = lanes.length - 1; i >= 0; i--) {
     let childLane = [];
-    let iconDebug = " ";
+    let tempTableItem = [];
+    const item = new Item();
+    item.label = lanes[i].type;
     switch (lanes[i].type) {
-      case 'field' :{
-        iconDebug  = "_";
+      case "Field_Lane": {
+        item.isARoad = true;
+        item.isAFood = false;
+        item.isDangerous = false;
+        item.isMoving = false;
         break;
       }
-      case 'forest' :{
+      case "Forest_Lane": {
         childLane = childLane.concat(lanes[i].tree);
-        iconDebug  = "_";
+        item.isARoad = true;
+        item.isAFood = false;
+        item.isDangerous = false;
+        item.isMoving = false;
         break;
       }
-      case 'car':{
+      case "Car_Lane": {
         childLane = childLane.concat(lanes[i].vehicle);
-        iconDebug  = "-";
+        item.isARoad = true;
+        item.isAFood = false;
+        item.isDangerous = false;
+        item.isMoving = false;
         break;
       }
-      case 'truck':{
+      case "Truck_Lane": {
         childLane = childLane.concat(lanes[i].vehicle);
-        iconDebug  = "-";
+        item.isARoad = true;
+        item.isAFood = false;
+        item.isDangerous = false;
+        item.isMoving = false;
         break;
       }
-      default :{
-        console.log("Error");
+      default: {
+        console.log("Error :" + lanes[i].type );
         break;
       }
     }
-    for (let j = 0; j <columns ; j++) {
-      tempArrStr.push(iconDebug);
+
+    for (let j = 0; j < columns; j++) {
+      tempTableItem.push(item);
     }
 
     for (let j = 0; j < childLane.length; j++) {
-      const pos = Math.floor(-(((positionWidth-boardWidth-childLane[j].position.x)/zoom)/positionWidth));
+      const pos = Math.floor(-((positionWidth - boardWidth - childLane[j].position.x) / zoom / positionWidth));
+      const innerItem = new Item();
+      innerItem.label = childLane[j].name;
+      innerItem.position = {
+        x : pos,
+        y: i,
+      }
       switch (childLane[j].name) {
-        case 'Truck_Vehicle' : {
-          tempArrStr[pos] = "$";
+        case "Truck_Vehicle": {
+          innerItem.isMoving = true;
+          innerItem.isDangerous = true;
+          innerItem.isAFood = false;
+          innerItem.isARoad = false;
           break;
         }
-        case 'Car_Vehicle' : {
-          tempArrStr[pos] = "$";
+        case "Car_Vehicle": {
+          innerItem.isMoving = true;
+          innerItem.isDangerous = true;
+          innerItem.isAFood = false;
+          innerItem.isARoad = false;
           break;
         }
-        case 'Tree' : {
-          tempArrStr[pos]  = "#";
+        case "Tree": {
+          innerItem.isMoving = false;
+          innerItem.isDangerous = false;
+          innerItem.isAFood = false;
+          innerItem.isARoad = false;
           break;
         }
-        default :{
+        default: {
           console.log("Error Default ");
         }
       }
+      tempTableItem[pos] = innerItem;
     }
-    tableTemp.push(tempArrStr);
+    tableItems.push(tempTableItem);
   }
-
-  tableTemp[tableTemp.length-currentLane-1][currentColumn] = "A";
-
-  for (let i = 0; i < tableTemp.length ; i++) {
+  tableItems[tableItems.length - currentLane - 1][currentColumn] = new Item("chicken",1,
+                                            true,false,true,
+                                            false,false, { x:currentColumn, y:currentLane});
+  let stat = !gameOver;
+  //Print Stats from Console Log
+  let FinaltempStr = "";
+  FinaltempStr += "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" + "\n";
+  for (let i = 0; i < tableItems.length; i++) {
     let tempStr = "";
-    for (let j = 0; j <tableTemp[i].length ; j++) {
-      tempStr += tableTemp[i][j];
+    for (let j = 0; j < tableItems[i].length; j++) {
+      let iconDebug = "";
+      if(tableItems[i][j] == undefined){
+        continue;
+      }
+      switch (tableItems[i][j].label) {
+        case "chicken": {
+          iconDebug = "A";
+          break;
+        }
+        case "Field_Lane": {
+          iconDebug = "_";
+          break;
+        }
+        case "Forest_Lane": {
+          iconDebug = "_";
+          break;
+        }
+        case "Car_Lane": {
+          iconDebug = "-";
+          break;
+        }
+        case "Truck_Lane": {
+          iconDebug = "-";
+          break;
+        }
+        case "Truck_Vehicle": {
+          iconDebug = "$";
+          break;
+        }
+        case "Car_Vehicle": {
+          iconDebug = "$";
+          break;
+        }
+        case "Tree": {
+          iconDebug = "#";
+          break;
+        }
+        default : {
+          console.log("Undefined Type !!");
+        }
+      }
+      tempStr += iconDebug;
     }
     FinaltempStr += tempStr + "\n";
   }
   FinaltempStr += "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" + "\n";
-
+  console.log(FinaltempStr);
+  return {statusGame: stat ,gridItems :tableItems};
 }
 
 requestAnimationFrame(animate);
