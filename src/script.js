@@ -24,7 +24,7 @@ const positionWidth = 42;
 const columns = 17;
 const boardWidth = positionWidth * columns;
 
-const stepTime = 10; // Miliseconds it takes for the chicken to take a step forward, backward, left or right
+const stepTime = 500; // Miliseconds it takes for the chicken to take a step forward, backward, left or right
 
 let lanes;
 let currentLane;
@@ -102,8 +102,9 @@ backLight.castShadow = true;
 scene.add(backLight);
 
 const laneTypes = ["Car_Lane", "Truck_Lane", "Forest_Lane"];
+const vehicleSize = { Car_Lane: 60, Truck_Lane: 105};
 const laneSpeeds = [2, 2.5, 3];
-const vechicleColors = [0x428eff, 0xffef42, 0xff7b42, 0xff426b];
+const vehicleColors = [0x428eff, 0xffef42, 0xff7b42, 0xff426b];
 const treeHeights = [20, 45, 60];
 
 const initaliseValues = () => {
@@ -163,7 +164,7 @@ function Wheel() {
 
 function Car() {
   const car = new THREE.Group();
-  const color = vechicleColors[Math.floor(Math.random() * vechicleColors.length)];
+  const color = vehicleColors[Math.floor(Math.random() * vehicleColors.length)];
 
   car.name = "Car_Vehicle";
   const main = new THREE.Mesh(new THREE.BoxBufferGeometry(60 * zoom, 30 * zoom, 15 * zoom), new THREE.MeshPhongMaterial({ color, flatShading: true }));
@@ -202,7 +203,7 @@ function Car() {
 
 function Truck() {
   const truck = new THREE.Group();
-  const color = vechicleColors[Math.floor(Math.random() * vechicleColors.length)];
+  const color = vehicleColors[Math.floor(Math.random() * vehicleColors.length)];
 
   truck.name = "Truck_Vehicle";
   const base = new THREE.Mesh(new THREE.BoxBufferGeometry(100 * zoom, 25 * zoom, 5 * zoom), new THREE.MeshLambertMaterial({ color: 0xb4c6fc, flatShading: true }));
@@ -355,7 +356,7 @@ function Lane(index) {
       this.direction = Math.random() >= 0.5;
 
       const occupiedPositions = new Set();
-      this.vehicle = [1, 2, 3].map(() => {
+      this.vehicle = [1].map(() => {
         const vehicle = new Car();
         let position;
         do {
@@ -376,7 +377,7 @@ function Lane(index) {
       this.direction = Math.random() >= 0.5;
 
       const occupiedPositions = new Set();
-      this.vehicle = [1, 2].map(() => {
+      this.vehicle = [1].map(() => {
         const vehicle = new Truck();
         let position;
         do {
@@ -456,6 +457,9 @@ function move(direction) {
 }
 
 function animate(timestamp) {
+  if(gameOver){
+    return;
+  }
   requestAnimationFrame(animate);
 
   if (!previousTimestamp) previousTimestamp = timestamp;
@@ -552,32 +556,36 @@ function animate(timestamp) {
   }
 
   // Hit test
-
-  //
-  // if(lanes[currentLane].type === 'Car_Lane' || lanes[currentLane].type === 'Truck_Lane') {
-  //   const chickenMinX = chicken.position.x - chickenSize*zoom/2;
-  //   const chickenMaxX = chicken.position.x + chickenSize*zoom/2;
-  //   const vehicleLength = { Car_Lane: 60, Truck_Lane: 105}[lanes[currentLane].type];
-  //   lanes[currentLane].vehicle.forEach(vehicle => {
-  //     const carMinX = vehicle.position.x - vehicleLength*zoom/2;
-  //     const carMaxX = vehicle.position.x + vehicleLength*zoom/2;
-  //     if(chickenMaxX > carMinX && chickenMinX < carMaxX) {
-  //       gameOver = true;
-  //       endDOM.style.visibility = 'visible';
-  //     }
-  //   });
-  // }
+  if(lanes[currentLane].type === 'Car_Lane' || lanes[currentLane].type === 'Truck_Lane') {
+    const chickenMinX = chicken.position.x - chickenSize*zoom/2;
+    const chickenMaxX = chicken.position.x + chickenSize*zoom/2;
+    const vehicleLength = vehicleSize[lanes[currentLane].type];
+    lanes[currentLane].vehicle.forEach(vehicle => {
+      const carMinX = vehicle.position.x - vehicleLength*zoom/2;
+      const carMaxX = vehicle.position.x + vehicleLength*zoom/2;
+      if(chickenMaxX > carMinX && chickenMinX < carMaxX) {
+        gameOver = true;
+        endDOM.style.visibility = 'visible';
+      }
+    });
+  }
 
   renderer.render(scene, camera);
 }
 
 function apiGameEngine(lanes = lanes) {
   let tableItems = [];
-  for (let i = lanes.length - 1; i >= 0; i--) {
+  for (let i =0; i < lanes.length ; i++) {
     let childLane = [];
     let tempTableItem = [];
+    let direction = -1;
     const item = new Item();
     item.label = lanes[i].type;
+    item.position = {
+      x : -1,
+      y: i,
+      pParent: [],
+    };
     switch (lanes[i].type) {
       case "Field_Lane": {
         item.isARoad = true;
@@ -600,6 +608,7 @@ function apiGameEngine(lanes = lanes) {
         item.isAFood = false;
         item.isDangerous = false;
         item.isMoving = false;
+        direction = lanes[i].direction;
         break;
       }
       case "Truck_Lane": {
@@ -608,6 +617,7 @@ function apiGameEngine(lanes = lanes) {
         item.isAFood = false;
         item.isDangerous = false;
         item.isMoving = false;
+        direction= lanes[i].direction;
         break;
       }
       default: {
@@ -617,16 +627,18 @@ function apiGameEngine(lanes = lanes) {
     }
 
     for (let j = 0; j < columns; j++) {
-      tempTableItem.push(item);
+      let copyNewItem =  JSON.parse(JSON.stringify(item));
+      copyNewItem.position.x = j;
+      tempTableItem.push(copyNewItem);
     }
-
     for (let j = 0; j < childLane.length; j++) {
-      const pos = Math.floor(-((positionWidth - boardWidth - childLane[j].position.x) / zoom / positionWidth));
+      let pos = Math.floor(-((positionWidth - boardWidth - childLane[j].position.x) / zoom / positionWidth));
       const innerItem = new Item();
       innerItem.label = childLane[j].name;
       innerItem.position = {
         x : pos,
         y: i,
+        pParent: [],
       }
       switch (childLane[j].name) {
         case "Truck_Vehicle": {
@@ -634,6 +646,27 @@ function apiGameEngine(lanes = lanes) {
           innerItem.isDangerous = true;
           innerItem.isAFood = false;
           innerItem.isARoad = false;
+            //ke kiri True
+            //ke kanan False
+          innerItem.size = Math.ceil(vehicleSize.Truck_Lane/positionWidth);
+          for (let iter=0; iter <  innerItem.size; iter++) {
+            if(direction){
+                pos--;
+            }else{
+                pos++;
+            }
+            if(pos < 0 || tempTableItem.length <= pos){
+               continue;
+            }
+            let bodyItem = JSON.parse(JSON.stringify(innerItem));
+            bodyItem.label = "Truck_Vehicle_Body";
+            bodyItem.position = {
+                x : pos,
+                y: i,
+                pParent: [ innerItem ],
+            }
+            tempTableItem[pos] = bodyItem;
+          }
           break;
         }
         case "Car_Vehicle": {
@@ -641,6 +674,25 @@ function apiGameEngine(lanes = lanes) {
           innerItem.isDangerous = true;
           innerItem.isAFood = false;
           innerItem.isARoad = false;
+          innerItem.size = Math.ceil(vehicleSize.Car_Lane/positionWidth);
+          for (let iter=0; iter <  innerItem.size; iter++) {
+            if(direction){
+                pos--;
+            }else{
+                pos++;
+            }
+            if(pos < 0 || tempTableItem.length <= pos){
+                continue;
+            }
+            let bodyItem = JSON.parse(JSON.stringify(innerItem));
+            bodyItem.label = "Car_Vehicle_Body";
+            bodyItem.position = {
+                x : pos,
+                y: i,
+                pParent: [ innerItem ],
+            }
+            tempTableItem[pos] = bodyItem;
+          }
           break;
         }
         case "Tree": {
@@ -658,14 +710,14 @@ function apiGameEngine(lanes = lanes) {
     }
     tableItems.push(tempTableItem);
   }
-  tableItems[tableItems.length - currentLane - 1][currentColumn] = new Item("chicken",1,
+  tableItems[currentLane][currentColumn] = new Item("chicken",1,
                                             true,false,true,
-                                            false,false, { x:currentColumn, y:currentLane});
+                                    false,false, { x:currentColumn, y:currentLane});
   let stat = !gameOver;
   //Print Stats from Console Log
   let FinaltempStr = "";
   FinaltempStr += "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" + "\n";
-  for (let i = 0; i < tableItems.length; i++) {
+  for (let i = tableItems.length-1; i >= 0 ; i--) {
     let tempStr = "";
     for (let j = 0; j < tableItems[i].length; j++) {
       let iconDebug = "";
@@ -701,6 +753,14 @@ function apiGameEngine(lanes = lanes) {
           iconDebug = "$";
           break;
         }
+        case "Truck_Vehicle_Body": {
+          iconDebug = "%";
+          break;
+        }
+        case "Car_Vehicle_Body": {
+          iconDebug = "%";
+          break;
+        }
         case "Tree": {
           iconDebug = "#";
           break;
@@ -714,7 +774,7 @@ function apiGameEngine(lanes = lanes) {
     FinaltempStr += tempStr + "\n";
   }
   FinaltempStr += "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" + "\n";
-  console.log(FinaltempStr);
+  //console.log(FinaltempStr);
   return {statusGame: stat ,gridItems :tableItems};
 }
 

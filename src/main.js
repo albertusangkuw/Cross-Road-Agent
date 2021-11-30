@@ -1,8 +1,13 @@
 if (window.Worker) {
-  const worker = new Worker("./src/worker.js");
+  const worker = new Worker("./src/worker.js" );
+
   setInterval(function () {
-    sendDataToWorkerAgent(worker)
-  }, 100);
+      if(gameOver == true){
+        return;
+      }
+      sendDataToWorkerAgent(worker)
+  }, 600);
+
   getDataToWorkerAgent(worker);
 } else {
   alert("Your browser doesn't support web workers.  Agent will not working  ! ");
@@ -18,8 +23,7 @@ function getDataToWorkerAgent(worker) {
     console.log(e.data);
     const command = e.data;
     if (typeof command === 'string' || command instanceof String){
-      //move(command);
-
+      move(command);
     }
     console.log('Message received from worker');
   }
