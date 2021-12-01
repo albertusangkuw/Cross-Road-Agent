@@ -16,24 +16,24 @@ aiAgent.onclick = function () {
     this.style.backgroundColor = "#fcba03";
     isAI = true;
   }
-}
+};
 gameMode.onclick = function () {
-  if(this.innerHTML == "Mode Finish"){
-    this.innerHTML = "Mode Infinity";
+  if(isInfiniteGame){
+    this.innerHTML = "Mode Finish";
     isInfiniteGame = false;
+    this.style.backgroundColor = "#fcba03";
     const extendedLane = Math.floor((Math.random() * 2) + 19) ;
     for (let i = 0; i <extendedLane; i++) {
       addLane();
     }
     addFinishLane();
-    //console.log(lanes);
-    this.style.backgroundColor = null;
+    console.log(lanes);
   } else{
-    this.style.backgroundColor = "#fcba03";
-    this.innerHTML = "Mode Finish";
+    this.style.backgroundColor = null;
+    this.innerHTML = "Mode Infinite";
     isInfiniteGame = true;
   }
-}
+};
 
 const scene = new THREE.Scene();
 
@@ -58,7 +58,7 @@ const positionWidth = 42;
 const columns = 17;
 const boardWidth = positionWidth * columns;
 
-const stepTime = 500; // Miliseconds it takes for the chicken to take a step forward, backward, left or right
+const stepTime = 200; // Miliseconds it takes for the chicken to take a step forward, backward, left or right
 
 let lanes;
 let currentLane;
@@ -147,6 +147,7 @@ backLight.castShadow = true;
 scene.add(backLight);
 
 const laneTypes = ["Car_Lane", "Truck_Lane", "Forest_Lane","River_Lane_Fixed"];
+//const laneTypes = ["Forest_Lane","Car_Lane"];
 const vehicleSize = { Car_Lane: 60, Truck_Lane: 105 };
 const laneSpeeds = [2, 2.5, 3];
 const vehicleColors = [0x428eff, 0xffef42, 0xff7b42, 0xff426b];
@@ -431,7 +432,7 @@ function Lane(index) {
   this.index = index;
   this.type = index <= 0 ? "Field_Lane" : laneTypes[Math.floor(Math.random() * laneTypes.length)];
   if(isRiverLastTime == true){
-    this.type =  laneTypes[1];
+    this.type =  laneTypes[0];
     isRiverLastTime = false;
   }
   switch (this.type) {
@@ -443,7 +444,7 @@ function Lane(index) {
       this.mesh = new Grass();
 
       this.occupiedPositions = new Set();
-      this.tree = [1, 2, 3, 4].map(() => {
+      this.tree = [1, 2].map(() => {
         const tree = new Tree();
         let position;
         do {
@@ -461,7 +462,7 @@ function Lane(index) {
       this.direction = Math.random() >= 0.5;
 
       const occupiedPositions = new Set();
-      this.vehicle = [1, 2].map(() => {
+      this.vehicle = [3,4].map(() => {
         const vehicle = new Car();
         let position;
         do {
@@ -482,7 +483,7 @@ function Lane(index) {
       this.direction = Math.random() >= 0.5;
 
       const occupiedPositions = new Set();
-      this.vehicle = [1, 2].map(() => {
+      this.vehicle = [1 ].map(() => {
         const vehicle = new Truck();
         let position;
         do {
@@ -578,6 +579,7 @@ function move(direction) {
   moves.push(direction);
 }
 
+let tableItemsGlobal;
 function animate(timestamp) {
   if (gameOver) {
     return;
@@ -715,177 +717,194 @@ function animate(timestamp) {
     winDOM.style.visibility = "visible";
   }
   //console.log(lanes);
+  tableItemsGlobal = refreshGrid2DObjek();
+  debuggingAPI(tableItemsGlobal);
   renderer.render(scene, camera);
+
 }
 
-function apiGameEngine(lanes = lanes) {
-  let tableItems = [];
+function apiGameEngine() {
+  let stat = !gameOver;
+  //Print Stats from Console Log
+  //debuggingAPI(tableItems);
+  return { statusGame: stat, gridItems: tableItemsGlobal };
+}
+function refreshGrid2DObjek() {
+  const tableItems = new Array();
+  if(tableItems.length < lanes.length){
+    for (let i =tableItems.length; i <lanes.length ; i++) {
+      tableItems.push(new Array(columns));
+      for (let j = 0; j <tableItems[i].length ; j++) {
+        tableItems[i][j] = new Item();
+      }
+    }
+  }
   for (let i = 0; i < lanes.length; i++) {
     let childLane = [];
-    let tempTableItem = [];
-    let direction = -1;
-    const item = new Item();
-    item.label = lanes[i].type;
-    item.position = {
-      x: -1,
-      y: i,
-      pParent: [],
-    };
-    switch (lanes[i].type) {
-      case "Field_Lane": {
-        item.isARoad = true;
-        item.isAFood = false;
-        item.isDangerous = false;
-        item.isMoving = false;
-        break;
+    //ke kiri True
+    //ke kanan False
+    let direction = "";
+    for (let j = 0; j < columns ; j++) {
+      tableItems[i][j].label = lanes[i].type;
+      tableItems[i][j].position.x = -1;
+      tableItems[i][j].position.y = i;
+      tableItems[i][j].pParent = [];
+
+      switch (lanes[i].type) {
+        case "Field_Lane": {
+          tableItems[i][j].isARoad = true;
+          tableItems[i][j].isAFood = false;
+          tableItems[i][j].isDangerous = false;
+          tableItems[i][j].isMoving = false;
+          break;
+        }
+        case "Forest_Lane": {
+          childLane = lanes[i].tree;
+          tableItems[i][j].isARoad = true;
+          tableItems[i][j].isAFood = false;
+          tableItems[i][j].isDangerous = false;
+          tableItems[i][j].isMoving = false;
+          break;
+        }
+        case "Car_Lane": {
+          childLane =  lanes[i].vehicle;
+          tableItems[i][j].isARoad = true;
+          tableItems[i][j].isAFood = false;
+          tableItems[i][j].isDangerous = false;
+          tableItems[i][j].isMoving = false;
+          direction = lanes[i].direction;
+          break;
+        }
+        case "Truck_Lane": {
+          childLane =lanes[i].vehicle;
+          tableItems[i][j].isARoad = true;
+          tableItems[i][j].isAFood = false;
+          tableItems[i][j].isDangerous = false;
+          tableItems[i][j].isMoving = false;
+          direction = lanes[i].direction;
+          break;
+        }
+        case "River_Lane_Fixed": {
+          childLane = lanes[i].bridge;
+          tableItems[i][j].isARoad = false;
+          tableItems[i][j].isAFood = false;
+          tableItems[i][j].isDangerous = true;
+          tableItems[i][j].isMoving = false;
+          break;
+        }
+        case "Finish_Lane": {
+          tableItems[i][j].isARoad = true;
+          tableItems[i][j].isAFood = false;
+          tableItems[i][j].status = 3;
+          tableItems[i][j].isDangerous = false;
+          tableItems[i][j].isMoving = false;
+          break;
+        }
+        default: {
+          console.log("Error Lane :" + lanes[i].type);
+          break;
+        }
       }
-      case "Forest_Lane": {
-        childLane = childLane.concat(lanes[i].tree);
-        item.isARoad = true;
-        item.isAFood = false;
-        item.isDangerous = false;
-        item.isMoving = false;
-        break;
-      }
-      case "Car_Lane": {
-        childLane = childLane.concat(lanes[i].vehicle);
-        item.isARoad = true;
-        item.isAFood = false;
-        item.isDangerous = false;
-        item.isMoving = false;
-        direction = lanes[i].direction;
-        break;
-      }
-      case "Truck_Lane": {
-        childLane = childLane.concat(lanes[i].vehicle);
-        item.isARoad = true;
-        item.isAFood = false;
-        item.isDangerous = false;
-        item.isMoving = false;
-        direction = lanes[i].direction;
-        break;
-      }
-      case "River_Lane_Fixed": {
-        childLane = childLane.concat(lanes[i].bridge);
-        item.isARoad = false;
-        item.isAFood = false;
-        item.isDangerous =true;
-        item.isMoving = false;
-        break;
-      }
-      case "Finish_Lane": {
-        //childLane = childLane.concat(lanes[i].bridge);
-        item.isARoad = true;
-        item.isAFood = false;
-        item.status = 3;
-        item.isDangerous =false;
-        item.isMoving = false;
-        break;
-      }
-      default: {
-        console.log("Error :" + lanes[i].type);
-        break;
-      }
-    }
-    for (let j = 0; j < columns; j++) {
-      let copyNewItem = JSON.parse(JSON.stringify(item));
-      copyNewItem.position.x = j;
-      tempTableItem.push(copyNewItem);
     }
     for (let j = 0; j < childLane.length; j++) {
-      let pos = Math.floor(-((positionWidth - boardWidth - childLane[j].position.x) / zoom / positionWidth));
-      const innerItem = new Item();
-      innerItem.label = childLane[j].name;
-      innerItem.position = {
-        x: pos,
-        y: i,
-        pParent: [],
-      };
+      let pos = (Math.floor(-((positionWidth - boardWidth - childLane[j].position.x) / zoom / positionWidth)));
+      let sizeItem = 0;
+      if(pos < 0 || pos >= columns){
+        continue;
+      }
+      tableItems[i][pos].label = childLane[j].name;
+      tableItems[i][pos].position.x = pos;
+      tableItems[i][pos].position.y = i;
+      tableItems[i][pos].position.pParent = [];
       switch (childLane[j].name) {
         case "Truck_Vehicle": {
-          innerItem.isMoving = true;
-          innerItem.isDangerous = true;
-          innerItem.isAFood = false;
-          innerItem.isARoad = false;
-          //ke kiri True
-          //ke kanan False
-          innerItem.size = Math.ceil(vehicleSize.Truck_Lane / positionWidth);
-          for (let iter = 0; iter < innerItem.size+1 ; iter++) {
+          tableItems[i][pos].isMoving = true;
+          tableItems[i][pos].isDangerous = true;
+          tableItems[i][pos].isAFood = false;
+          tableItems[i][pos].isARoad = false;
+
+          tableItems[i][pos].size = Math.ceil(vehicleSize.Truck_Lane / positionWidth);
+          sizeItem = tableItems[i][pos].size;
+          for (let iter = 0; iter < sizeItem ; iter++) {
             if (direction) {
-              pos--;
-            } else {
               pos++;
+            } else {
+              pos--;
             }
-            if (pos < 0 || tempTableItem.length <= pos) {
+            if (pos < 0 || tableItems[i].length <= pos) {
               continue;
             }
-            let bodyItem = JSON.parse(JSON.stringify(innerItem));
-            bodyItem.label = "Truck_Vehicle_Body";
-            bodyItem.position = {
-              x: pos,
-              y: i,
-              pParent: [innerItem],
-            };
-            tempTableItem[pos] = bodyItem;
+            tableItems[i][pos].label = "Truck_Vehicle_Body";
+            tableItems[i][pos].position.x = pos;
+            tableItems[i][pos].position.y = i;
+            tableItems[i][pos].position.pParent = [tableItems[i][pos]];
+
+            tableItems[i][pos].isMoving = tableItems[i][pos].isMoving ;
+            tableItems[i][pos].isDangerous = tableItems[i][pos].isDangerous;
+            tableItems[i][pos].isAFood = tableItems[i][pos].isAFood ;
+            tableItems[i][pos].isARoad = tableItems[i][pos].isARoad ;
           }
           break;
         }
         case "Car_Vehicle": {
-          innerItem.isMoving = true;
-          innerItem.isDangerous = true;
-          innerItem.isAFood = false;
-          innerItem.isARoad = false;
-          innerItem.size = Math.ceil(vehicleSize.Car_Lane / positionWidth);
-          for (let iter = 0; iter < innerItem.size ; iter++) {
+          tableItems[i][pos].isMoving = true;
+          tableItems[i][pos].isDangerous = true;
+          tableItems[i][pos].isAFood = false;
+          tableItems[i][pos].isARoad = false;
+          tableItems[i][pos].size = Math.ceil(vehicleSize.Car_Lane / positionWidth);
+          sizeItem = tableItems[i][pos].size;
+          for (let iter = 0; iter <  sizeItem ; iter++) {
             if (direction) {
-              pos--;
-            } else {
               pos++;
+            } else {
+              pos--;
             }
-            if (pos < 0 || tempTableItem.length <= pos) {
+            if (pos < 0 || tableItems[i].length <= pos) {
               continue;
             }
-            let bodyItem = JSON.parse(JSON.stringify(innerItem));
-            bodyItem.label = "Car_Vehicle_Body";
-            bodyItem.position = {
-              x: pos,
-              y: i,
-              pParent: [innerItem],
-            };
-            tempTableItem[pos] = bodyItem;
+            tableItems[i][pos].label = "Car_Vehicle_Body";
+            tableItems[i][pos].position.x = pos;
+            tableItems[i][pos].position.y = i;
+            tableItems[i][pos].position.pParent = [tableItems[i][j]];
+
+            tableItems[i][pos].isMoving = tableItems[i][pos].isMoving ;
+            tableItems[i][pos].isDangerous = tableItems[i][pos].isDangerous;
+            tableItems[i][pos].isAFood = tableItems[i][pos].isAFood ;
+            tableItems[i][pos].isARoad = tableItems[i][pos].isARoad ;
           }
           break;
         }
         case "Tree": {
-          innerItem.isMoving = false;
-          innerItem.isDangerous = false;
-          innerItem.isAFood = false;
-          innerItem.isARoad = false;
+          tableItems[i][pos].isMoving = false;
+          tableItems[i][pos].isDangerous = false;
+          tableItems[i][pos].isAFood = false;
+          tableItems[i][pos].isARoad = false;
           break;
         }
         case "Bridge": {
-          innerItem.isMoving = false;
-          innerItem.isDangerous = false;
-          innerItem.isAFood = false;
-          innerItem.isARoad = true;
-          innerItem.size = 1;
-          for (let iter = 0; iter < innerItem.size-1; iter++) {
+          tableItems[i][pos].isMoving = false;
+          tableItems[i][pos].isDangerous = false;
+          tableItems[i][pos].isAFood = false;
+          tableItems[i][pos].isARoad = true;
+          tableItems[i][pos].size = 1;
+          sizeItem = tableItems[i][pos].size;
+          for (let iter = 0; iter <  sizeItem-1; iter++) {
             if (direction) {
               pos--;
             } else {
               pos++;
             }
-            if (pos < 0 || tempTableItem.length <= pos) {
+            if (pos < 0 || tableItems[i].length <= pos) {
               continue;
             }
-            let bodyItem = JSON.parse(JSON.stringify(innerItem));
-            bodyItem.label = "Bridge_Body";
-            bodyItem.position = {
-              x: pos,
-              y: i,
-              pParent: [innerItem],
-            };
-            tempTableItem[pos] = bodyItem;
+            tableItems[i][pos].position.x = pos;
+            tableItems[i][pos].position.y = i;
+            tableItems[i][pos].pParent = tableItems[i][j];
+
+            tableItems[i][pos].isMoving = tableItems[i][pos].isMoving ;
+            tableItems[i][pos].isDangerous = tableItems[i][pos].isDangerous;
+            tableItems[i][pos].isAFood = tableItems[i][pos].isAFood ;
+            tableItems[i][pos].isARoad = tableItems[i][pos].isARoad ;
           }
           break;
         }
@@ -893,15 +912,17 @@ function apiGameEngine(lanes = lanes) {
           console.log("Error Default ");
         }
       }
-      tempTableItem[pos] = innerItem;
     }
-    tableItems.push(tempTableItem);
   }
-  tableItems[currentLane][currentColumn] = new Item("chicken", 1, true, false, true, false, false, { x: currentColumn, y: currentLane });
-  let stat = !gameOver;
-  //Print Stats from Console Log
-  //debuggingAPI(tableItems);
-  return { statusGame: stat, gridItems: tableItems };
+  tableItems[currentLane][currentColumn].label = "chicken" ;
+  tableItems[currentLane][currentColumn].isControllable = true ;
+  tableItems[currentLane][currentColumn].isDangerous = false ;
+  tableItems[currentLane][currentColumn].isMoving = true ;
+  tableItems[currentLane][currentColumn].isARoad = true ;
+  tableItems[currentLane][currentColumn].isAFood = false ;
+  tableItems[currentLane][currentColumn].position.x = currentColumn; // ? kebalik ?
+  tableItems[currentLane][currentColumn].position.y = currentLane ;
+  return tableItems;
 }
 
 function debuggingAPI(tableItems) {
@@ -967,8 +988,12 @@ function debuggingAPI(tableItems) {
           iconDebug = "F";
           break;
         }
+        case "Chicken": {
+          iconDebug = "C";
+          break;
+        }
         default: {
-          console.log("Undefined Type !!");
+          console.log("Undefined Type !! :" + tableItems[i][j].label );
         }
       }
       tempStr += iconDebug;

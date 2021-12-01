@@ -1,6 +1,6 @@
 let destination = { col: -1, row: -1 };
 let currentPos = { col: -1, row: -1 };
-
+let trajectoryDestination = [];
 let finalDestination  = { col: -1, row: -1};
 onmessage = function (e) {
   //console.log("Worker Agent: Message received from main script ");
@@ -10,7 +10,6 @@ onmessage = function (e) {
     return;
   }
   const itemData = gameData.gridItems;
-  let trajectoryDestination = [];
   //Pemisahan Objek Berisiko
   let binaryTable = make2DArray(itemData[itemData.length - 1].length, itemData.length, -1);
   for (let i = 0; i < binaryTable.length; i++) {
@@ -46,16 +45,18 @@ onmessage = function (e) {
       }
     }
   }
-  loggingTable(itemData);
+
   const reflexOrder = reflexAgent(itemData);
-  if (reflexOrder.row != currentPos.row && reflexOrder.col != currentPos.col) {
+  if (reflexOrder.row != currentPos.row || reflexOrder.col != currentPos.col) {
     const executeMessage = executeOrder(reflexOrder, binaryTable);
     if (executeMessage != "hold") {
       postMessage(executeMessage);
       return;
+    }else{
+      console.log("No Reflex");
     }
   }
-
+  //return;
   const gridAStar = new Array(binaryTable.length);
   for (let i = 0; i < binaryTable.length; i++) {
     const tempGrid = new Array(binaryTable[i].length);
@@ -70,45 +71,50 @@ onmessage = function (e) {
   }
 
   //Mencari Tujuan dan mencari jalan yang bisa dilalui
-  const arrDestination = chooseDestination(binaryTable);
-  for (let i = 0; i < arrDestination.length; i++) {
-    const start = [currentPos.row, currentPos.col];
-    const end = [arrDestination[i].row, arrDestination[i].col];
-    let aStarInstance = new AStar(start, end, gridAStar);
-    let optimalPath = [] ;
-    try {
-      aStarInstance = new AStar(start, end, gridAStar);
-      aStarInstance.startAlgorithm();
-      optimalPath = aStarInstance.optimalPath;
-    }catch (e) {
-      console.log("Error Instance A Star");
-    }
-    if (optimalPath.length > 0) {
-      destination.col = arrDestination[i].col;
-      destination.row = arrDestination[i].row;
-      for (let j = 0; j < optimalPath.length; j++) {
-        let item = itemData[parseInt(optimalPath[j].row)][parseInt(optimalPath[j].col)];
-        if (j == optimalPath.length - 1) {
-          continue;
-        }
-        if (j == 0) {
-          item.label = "end";
-          continue;
-        }
-        item.label = "trajectory";
+  if(trajectoryDestination.length == 0) {
+    const arrDestination = chooseDestination(binaryTable);
+    for (let i = 0; i < arrDestination.length; i++) {
+      const start = [currentPos.row, currentPos.col];
+      const end = [arrDestination[i].row, arrDestination[i].col];
+      let aStarInstance = new AStar(start, end, gridAStar);
+      let optimalPath = [];
+      try {
+        aStarInstance = new AStar(start, end, gridAStar);
+        aStarInstance.startAlgorithm();
+        optimalPath = aStarInstance.optimalPath;
+      } catch (e) {
+        console.log("Error Instance A Star");
       }
-      trajectoryDestination = optimalPath;
-      trajectoryDestination.pop();
-      break;
+      if (optimalPath.length > 0) {
+        destination.col = arrDestination[i].col;
+        destination.row = arrDestination[i].row;
+        for (let j = 0; j < optimalPath.length; j++) {
+          let item = itemData[parseInt(optimalPath[j].row)][parseInt(optimalPath[j].col)];
+          if (j == optimalPath.length - 1) {
+            continue;
+          }
+          if (j == 0) {
+            item.label = "end";
+            continue;
+          }
+          item.label = "trajectory";
+        }
+        trajectoryDestination = optimalPath;
+        trajectoryDestination.pop();
+        break;
+      }
     }
+
   }
+  //console.log(itemData);
+  loggingTable(itemData);
+  //console.log(currentPos);
 
   //Melakukan Eksekusi
-  if(trajectoryDestination == undefined){
+  if(trajectoryDestination == undefined || trajectoryDestination.length == 0){
     postMessage("hold");
   }
   const nextStep = trajectoryDestination.pop();
-
   postMessage(executeOrder(nextStep, binaryTable));
 };
 function SegmentationDangerItem(gridBinary = [], cols = -1, rows = -1, value = -1) {
@@ -160,94 +166,90 @@ function reflexAgent(itemData) {
   let canGoRight = true;
   let canGoDown = true;
   let reflexOrder = { row: currentPos.row, col: currentPos.col };
-  //
-  //    currentPos.col == j , currentPos.row == i
+  if (
+      currentPos.row + 1 < itemData.length &&
+      currentPos.col - 1 >= 0 &&
+      itemData[currentPos.row + 1][currentPos.col - 1].isDangerous &&
+      itemData[currentPos.row + 1][currentPos.col - 1].isMoving
+  ) {
+    console.log("Sebelah Kiri Atas");
+    canGoUp =false;
+    canGoLeft = false;
+  }
+  if (
+      currentPos.row + 1 < itemData.length &&
+      currentPos.col < itemData[currentPos.row + 1].length &&
+      itemData[currentPos.row + 1][currentPos.col].isDangerous &&
+      itemData[currentPos.row + 1][currentPos.col].isMoving
+  ) {
+    console.log("Sebelah Atas");
+    // tidak bisa ke bawah
+    canGoUp = false
+  }
+
   if (
     currentPos.row + 1 < itemData.length &&
     currentPos.col + 1 < itemData[currentPos.row + 1].length &&
-    itemData[currentPos.row + 1][currentPos.col + 1] != undefined &&
     itemData[currentPos.row + 1][currentPos.col + 1].isDangerous &&
     itemData[currentPos.row + 1][currentPos.col + 1].isMoving
   ) {
+    console.log("Sebelah Atas Kanan");
     // tidak bisa ke bawah
-    canGoDown = false;
+    canGoUp = false;
     canGoRight = false;
   }
   if (
-    currentPos.row + 1 < itemData.length &&
-    currentPos.col < itemData[currentPos.row + 1].length &&
-    itemData[currentPos.row + 1][currentPos.col] != undefined &&
-    itemData[currentPos.row + 1][currentPos.col].isDangerous &&
-    itemData[currentPos.row + 1][currentPos.col].isMoving
+      currentPos.row < itemData.length &&
+      currentPos.col - 1 >= 0 &&
+      itemData[currentPos.row][currentPos.col - 1].isDangerous &&
+      itemData[currentPos.row][currentPos.col - 1].isMoving
   ) {
-    // tidak bisa ke bawah
-    canGoDown = false;
+    console.log("Sebelah Kiri");
+    // tidak bisa ke kanan dan kiri
+    canGoLeft = false;
   }
   if (
-    currentPos.row + 1 < itemData.length &&
-    currentPos.col - 1 >= 0 &&
-    itemData[currentPos.row + 1][currentPos.col - 1] != undefined &&
-    itemData[currentPos.row + 1][currentPos.col - 1].isDangerous &&
-    itemData[currentPos.row + 1][currentPos.col - 1].isMoving
+      currentPos.row < itemData.length &&
+      currentPos.col + 1 < itemData[currentPos.row].length &&
+      itemData[currentPos.row][currentPos.col + 1].isDangerous &&
+      itemData[currentPos.row][currentPos.col + 1].isMoving
   ) {
-    // tidak bisa ke bawah
-    canGoDown = false;
-    canGoLeft = false;
+    // tidak bisa ke kanan dan kiri
+    console.log("Sebelah Kanan");
+    canGoRight = false;
   }
   if (
     currentPos.row - 1 >= 0 &&
     currentPos.col - 1 >= 0 &&
-    itemData[currentPos.row - 1][currentPos.col - 1] != undefined &&
     itemData[currentPos.row - 1][currentPos.col - 1].isDangerous &&
     itemData[currentPos.row - 1][currentPos.col - 1].isMoving
   ) {
+    console.log("Sebelah Kiri Bawah");
     // tidak bisa ke atas
-    canGoUp = false;
+    canGoDown = false;
     canGoLeft = false;
   }
   if (
     currentPos.row - 1 >= 0 &&
     currentPos.col < itemData[currentPos.row - 1][currentPos.col].length &&
-    itemData[currentPos.row - 1][currentPos.col]  != undefined &&
     itemData[currentPos.row - 1][currentPos.col].isDangerous &&
     itemData[currentPos.row - 1][currentPos.col].isMoving
   ) {
-    // tidak bisa ke atas
-    canGoUp = false;
+    console.log("Sebelah Bawah");
+    canGoDown = false;
   }
   if (
     currentPos.row - 1 >= 0 &&
     currentPos.col + 1 < itemData[currentPos.row - 1].length &&
-    itemData[currentPos.row - 1][currentPos.col + 1]  != undefined &&
     itemData[currentPos.row - 1][currentPos.col + 1].isDangerous &&
     itemData[currentPos.row - 1][currentPos.col + 1].isMoving
   ) {
     // tidak bisa ke atas
-    canGoUp = false;
+    console.log("Sebelah Kanan Bawah");
+    canGoDown = false;
     canGoRight = false;
   }
-  if (
-    currentPos.row < itemData.length &&
-    currentPos.col + 1 < itemData[currentPos.row].length &&
-    itemData[currentPos.row][currentPos.col + 1] != undefined &&
-    itemData[currentPos.row][currentPos.col + 1].isDangerous &&
-    itemData[currentPos.row][currentPos.col + 1].isMoving
-  ) {
-    // tidak bisa ke kanan dan kiri
-    canGoRight = false;
-    canGoLeft = false;
-  }
-  if (
-    currentPos.row < itemData.length &&
-    currentPos.col - 1 >= 0 &&
-    itemData[currentPos.row][currentPos.col - 1]  != undefined &&
-    itemData[currentPos.row][currentPos.col - 1].isDangerous &&
-    itemData[currentPos.row][currentPos.col - 1].isMoving
-  ) {
-    // tidak bisa ke kanan dan kiri
-    canGoLeft = false;
-    canGoRight = false;
-  }
+
   if (!canGoUp || !canGoLeft || !canGoRight || !canGoDown) {
     let loggingReflex = "";
     if (canGoUp) {
@@ -259,7 +261,6 @@ function reflexAgent(itemData) {
     } else if (canGoLeft) {
       reflexOrder.col = currentPos.col - 1;
       loggingReflex = "left";
-      //possibleMove.left;
     } else if (canGoRight) {
       reflexOrder.col = currentPos.col + 1;
       loggingReflex = "right";
@@ -271,7 +272,6 @@ function reflexAgent(itemData) {
   }
   return reflexOrder;
 }
-
 function make2DArray(col = 0, row = 0, defaultValue = 0) {
   var arr = [];
   for (let i = 0; i < row; i++) {
@@ -547,3 +547,4 @@ class NodeElement {
     return neighbours;
   }
 }
+
