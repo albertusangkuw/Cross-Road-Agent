@@ -10,7 +10,7 @@
 
 </head>
 <body>
-<div id="counter">0</div>
+<div id="counter" style="background-color: #000 ; opacity: .5;">0</div>
     
 <div id="controls">
   <div>
@@ -42,12 +42,20 @@
         </g>
       </svg>
     </button>
+    <button id="aiToggle">
+        No AI
+    </button>
+    <button id="finishToggle">
+        Mode Finish
+    </button>
   </div>
 </div>
 
 <div id="end">
   <button id="retry">Retry</button>
+  <button id="win">Congratulations</button>
 </div>
+
 
 <div class= "credits">
   Made with <i class="fas fa-heart"></i> & 🐓
@@ -56,5 +64,6 @@
   <script  src="./src/script.js"></script>
   <script  src="./model/item.js"></script>
   <script src="./src/main.js"></script>
+
 </body>
 </html>

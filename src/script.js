@@ -1,5 +1,39 @@
 const counterDOM = document.getElementById("counter");
 const endDOM = document.getElementById("end");
+const winDOM = document.getElementById("win");
+const aiAgent = document.getElementById("aiToggle");
+const gameMode = document.getElementById("finishToggle");
+let isAI = false;
+let isInfiniteGame = true;
+
+aiAgent.onclick = function () {
+  if(this.innerHTML == "AI"){
+    this.innerHTML = "No AI";
+    this.style.backgroundColor = null;
+    isAI = false;
+  } else{
+    this.innerHTML = "AI";
+    this.style.backgroundColor = "#fcba03";
+    isAI = true;
+  }
+}
+gameMode.onclick = function () {
+  if(this.innerHTML == "Mode Finish"){
+    this.innerHTML = "Mode Infinity";
+    isInfiniteGame = false;
+    const extendedLane = Math.floor((Math.random() * 2) + 19) ;
+    for (let i = 0; i <extendedLane; i++) {
+      addLane();
+    }
+    addFinishLane();
+    //console.log(lanes);
+    this.style.backgroundColor = null;
+  } else{
+    this.style.backgroundColor = "#fcba03";
+    this.innerHTML = "Mode Finish";
+    isInfiniteGame = true;
+  }
+}
 
 const scene = new THREE.Scene();
 
@@ -70,6 +104,17 @@ const addLane = () => {
   lanes.push(lane);
 };
 
+const addFinishLane = () => {
+  const index = lanes.length;
+  const lane = new Lane(-1);
+  lane.index = index;
+  lane.type = "Finish_Lane";
+  lane.mesh = new FinishMark();
+  lane.mesh.position.y = index * positionWidth * zoom;
+  scene.add(lane.mesh);
+  lanes.push(lane);
+};
+
 const chicken = new Chicken();
 scene.add(chicken);
 
@@ -101,12 +146,12 @@ backLight.position.set(200, 200, 50);
 backLight.castShadow = true;
 scene.add(backLight);
 
-const laneTypes = ["Car_Lane", "Truck_Lane", "Forest_Lane"];
-const vehicleSize = { Car_Lane: 60, Truck_Lane: 105};
+const laneTypes = ["Car_Lane", "Truck_Lane", "Forest_Lane","River_Lane_Fixed"];
+const vehicleSize = { Car_Lane: 60, Truck_Lane: 105 };
 const laneSpeeds = [2, 2.5, 3];
 const vehicleColors = [0x428eff, 0xffef42, 0xff7b42, 0xff426b];
 const treeHeights = [20, 45, 60];
-
+let isRiverLastTime = false;
 const initaliseValues = () => {
   lanes = generateLanes();
 
@@ -129,6 +174,8 @@ const initaliseValues = () => {
 
   dirLight.position.x = initialDirLightPositionX;
   dirLight.position.y = initialDirLightPositionY;
+
+  winDOM.style.visibility = "hidden";
 };
 
 initaliseValues();
@@ -325,10 +372,68 @@ function Grass() {
   return grass;
 }
 
+function FinishMark() {
+  const finishMark = new THREE.Group();
+  finishMark.name = "Finish_Mark";
+  const createSection = (color) => new THREE.Mesh(new THREE.BoxBufferGeometry(boardWidth * zoom, positionWidth * zoom, 3 * zoom), new THREE.MeshPhongMaterial({ color }));
+
+  const middle = createSection(0x231D63);
+  middle.receiveShadow = true;
+  finishMark.add(middle);
+
+  const left = createSection(0x280D8A);
+  left.position.x = -boardWidth * zoom;
+  finishMark.add(left);
+
+  const right = createSection(0x2F2940);
+  right.position.x = boardWidth * zoom;
+  finishMark.add(right);
+
+  finishMark.position.z = 1.5 * zoom;
+  return finishMark;
+}
+
+function River() {
+  const river = new THREE.Group();
+  river.name = "River_Lane";
+  const createSection = (color) => new THREE.Mesh(new THREE.BoxBufferGeometry(boardWidth * zoom, positionWidth * zoom, 3 * zoom), new THREE.MeshPhongMaterial({ color }));
+
+  const middle = createSection(0x0081FF);
+  middle.receiveShadow = true;
+  river.add(middle);
+
+  const left = createSection(0x0081FF);
+  left.position.x = -boardWidth * zoom;
+  river.add(left);
+
+  const right = createSection(0x0081FF);
+  right.position.x = boardWidth * zoom;
+  river.add(right);
+
+  river.position.z = 1.5 * zoom;
+  return river;
+}
+
+function Bridge() {
+  const bridge = new THREE.Group();
+  bridge.name = "Bridge";
+  const body = new THREE.Mesh(new THREE.BoxBufferGeometry(positionWidth* zoom, positionWidth*zoom,3*zoom), new THREE.MeshPhongMaterial({ color: 0x4D4736, flatShading: true }));
+  body.position.z = 5;
+  body.castShadow = true;
+  body.receiveShadow = false;
+  bridge.add(body);
+
+  return bridge;
+}
+
+
 function Lane(index) {
   this.index = index;
   this.type = index <= 0 ? "Field_Lane" : laneTypes[Math.floor(Math.random() * laneTypes.length)];
-
+  if(isRiverLastTime == true){
+    this.type =  laneTypes[1];
+    isRiverLastTime = false;
+  }
   switch (this.type) {
     case "Field_Lane": {
       this.mesh = new Grass();
@@ -356,7 +461,7 @@ function Lane(index) {
       this.direction = Math.random() >= 0.5;
 
       const occupiedPositions = new Set();
-      this.vehicle = [1].map(() => {
+      this.vehicle = [1, 2].map(() => {
         const vehicle = new Car();
         let position;
         do {
@@ -377,7 +482,7 @@ function Lane(index) {
       this.direction = Math.random() >= 0.5;
 
       const occupiedPositions = new Set();
-      this.vehicle = [1].map(() => {
+      this.vehicle = [1, 2].map(() => {
         const vehicle = new Truck();
         let position;
         do {
@@ -392,8 +497,26 @@ function Lane(index) {
       this.speed = laneSpeeds[Math.floor(Math.random() * laneSpeeds.length)];
       break;
     }
+    case "River_Lane_Fixed" :{
+      isRiverLastTime = true;
+      this.mesh = new River();
+      this.occupiedPositions = new Set();
+      this.bridge = [1, 2, 3, 4].map(() => {
+        const bridge = new Bridge();
+        let position;
+        do {
+          position = Math.floor(Math.random() * columns);
+        } while (this.occupiedPositions.has(position));
+        this.occupiedPositions.add(position);
+        bridge.position.x = (position * positionWidth + positionWidth / 2) * zoom - (boardWidth * zoom) / 2;
+        this.mesh.add(bridge);
+        return bridge;
+      });
+      break;
+    }
   }
 }
+
 
 document.querySelector("#retry").addEventListener("click", () => {
   lanes.forEach((lane) => scene.remove(lane.mesh));
@@ -424,7 +547,7 @@ window.addEventListener("keydown", (event) => {
     move("right");
   }
 });
-let finalPositionsLog = {};
+
 function move(direction) {
   const finalPositions = moves.reduce(
     (position, move) => {
@@ -438,7 +561,7 @@ function move(direction) {
   if (direction === "forward") {
     if (lanes[finalPositions.lane + 1].type === "Forest_Lane" && lanes[finalPositions.lane + 1].occupiedPositions.has(finalPositions.column)) return;
     if (!stepStartTimestamp) startMoving = true;
-    addLane();
+    if(isInfiniteGame == true)    addLane();
   } else if (direction === "backward") {
     if (finalPositions.lane === 0) return;
     if (lanes[finalPositions.lane - 1].type === "Forest_Lane" && lanes[finalPositions.lane - 1].occupiedPositions.has(finalPositions.column)) return;
@@ -453,11 +576,10 @@ function move(direction) {
     if (!stepStartTimestamp) startMoving = true;
   }
   moves.push(direction);
-  finalPositionsLog = finalPositions;
 }
 
 function animate(timestamp) {
-  if(gameOver){
+  if (gameOver) {
     return;
   }
   requestAnimationFrame(animate);
@@ -556,33 +678,56 @@ function animate(timestamp) {
   }
 
   // Hit test
-  if(lanes[currentLane].type === 'Car_Lane' || lanes[currentLane].type === 'Truck_Lane') {
-    const chickenMinX = chicken.position.x - chickenSize*zoom/2;
-    const chickenMaxX = chicken.position.x + chickenSize*zoom/2;
-    const vehicleLength = vehicleSize[lanes[currentLane].type];
-    lanes[currentLane].vehicle.forEach(vehicle => {
-      const carMinX = vehicle.position.x - vehicleLength*zoom/2;
-      const carMaxX = vehicle.position.x + vehicleLength*zoom/2;
-      if(chickenMaxX > carMinX && chickenMinX < carMaxX) {
+  if (lanes[currentLane].type === "Car_Lane" || lanes[currentLane].type === "Truck_Lane" || lanes[currentLane].type === "River_Lane_Fixed") {
+    const chickenMinX = chicken.position.x - (chickenSize * zoom) / 2;
+    const chickenMaxX = chicken.position.x + (chickenSize * zoom) / 2;
+    if(lanes[currentLane].vehicle != undefined) {
+      const vehicleLength = vehicleSize[lanes[currentLane].type];
+      lanes[currentLane].vehicle.forEach((vehicle) => {
+        const carMinX = vehicle.position.x - (vehicleLength * zoom) / 2;
+        const carMaxX = vehicle.position.x + (vehicleLength * zoom) / 2;
+        if (chickenMaxX > carMinX && chickenMinX < carMaxX) {
+          gameOver = true;
+          endDOM.style.visibility = "visible";
+        }
+      });
+    }
+    if(lanes[currentLane].bridge != undefined) {
+      let isInBridge = false;
+      lanes[currentLane].bridge.forEach((bridge) => {
+        const bridgeMinX = bridge.position.x - (positionWidth*zoom) / 2;
+        const bridgeMaxX = bridge.position.x + (positionWidth*zoom)/2;
+        if (chickenMaxX > bridgeMinX && chickenMinX < bridgeMaxX) {
+          //console.log("In Bridge");
+          isInBridge = true;
+        }else{
+         // console.log("Out Bridge");
+        }
+      });
+      if(isInBridge == false){
         gameOver = true;
-        endDOM.style.visibility = 'visible';
+        endDOM.style.visibility = "visible";
       }
-    });
+    }
   }
-
+  if(lanes[currentLane].type == "Finish_Lane"){
+    gameOver = true;
+    winDOM.style.visibility = "visible";
+  }
+  //console.log(lanes);
   renderer.render(scene, camera);
 }
 
 function apiGameEngine(lanes = lanes) {
   let tableItems = [];
-  for (let i =0; i < lanes.length ; i++) {
+  for (let i = 0; i < lanes.length; i++) {
     let childLane = [];
     let tempTableItem = [];
     let direction = -1;
     const item = new Item();
     item.label = lanes[i].type;
     item.position = {
-      x : -1,
+      x: -1,
       y: i,
       pParent: [],
     };
@@ -617,17 +762,33 @@ function apiGameEngine(lanes = lanes) {
         item.isAFood = false;
         item.isDangerous = false;
         item.isMoving = false;
-        direction= lanes[i].direction;
+        direction = lanes[i].direction;
+        break;
+      }
+      case "River_Lane_Fixed": {
+        childLane = childLane.concat(lanes[i].bridge);
+        item.isARoad = false;
+        item.isAFood = false;
+        item.isDangerous =true;
+        item.isMoving = false;
+        break;
+      }
+      case "Finish_Lane": {
+        //childLane = childLane.concat(lanes[i].bridge);
+        item.isARoad = true;
+        item.isAFood = false;
+        item.status = 3;
+        item.isDangerous =false;
+        item.isMoving = false;
         break;
       }
       default: {
-        console.log("Error :" + lanes[i].type );
+        console.log("Error :" + lanes[i].type);
         break;
       }
     }
-
     for (let j = 0; j < columns; j++) {
-      let copyNewItem =  JSON.parse(JSON.stringify(item));
+      let copyNewItem = JSON.parse(JSON.stringify(item));
       copyNewItem.position.x = j;
       tempTableItem.push(copyNewItem);
     }
@@ -636,35 +797,35 @@ function apiGameEngine(lanes = lanes) {
       const innerItem = new Item();
       innerItem.label = childLane[j].name;
       innerItem.position = {
-        x : pos,
+        x: pos,
         y: i,
         pParent: [],
-      }
+      };
       switch (childLane[j].name) {
         case "Truck_Vehicle": {
           innerItem.isMoving = true;
           innerItem.isDangerous = true;
           innerItem.isAFood = false;
           innerItem.isARoad = false;
-            //ke kiri True
-            //ke kanan False
-          innerItem.size = Math.ceil(vehicleSize.Truck_Lane/positionWidth);
-          for (let iter=0; iter <  innerItem.size; iter++) {
-            if(direction){
-                pos--;
-            }else{
-                pos++;
+          //ke kiri True
+          //ke kanan False
+          innerItem.size = Math.ceil(vehicleSize.Truck_Lane / positionWidth);
+          for (let iter = 0; iter < innerItem.size+1 ; iter++) {
+            if (direction) {
+              pos--;
+            } else {
+              pos++;
             }
-            if(pos < 0 || tempTableItem.length <= pos){
-               continue;
+            if (pos < 0 || tempTableItem.length <= pos) {
+              continue;
             }
             let bodyItem = JSON.parse(JSON.stringify(innerItem));
             bodyItem.label = "Truck_Vehicle_Body";
             bodyItem.position = {
-                x : pos,
-                y: i,
-                pParent: [ innerItem ],
-            }
+              x: pos,
+              y: i,
+              pParent: [innerItem],
+            };
             tempTableItem[pos] = bodyItem;
           }
           break;
@@ -674,23 +835,23 @@ function apiGameEngine(lanes = lanes) {
           innerItem.isDangerous = true;
           innerItem.isAFood = false;
           innerItem.isARoad = false;
-          innerItem.size = Math.ceil(vehicleSize.Car_Lane/positionWidth);
-          for (let iter=0; iter <  innerItem.size; iter++) {
-            if(direction){
-                pos--;
-            }else{
-                pos++;
+          innerItem.size = Math.ceil(vehicleSize.Car_Lane / positionWidth);
+          for (let iter = 0; iter < innerItem.size ; iter++) {
+            if (direction) {
+              pos--;
+            } else {
+              pos++;
             }
-            if(pos < 0 || tempTableItem.length <= pos){
-                continue;
+            if (pos < 0 || tempTableItem.length <= pos) {
+              continue;
             }
             let bodyItem = JSON.parse(JSON.stringify(innerItem));
             bodyItem.label = "Car_Vehicle_Body";
             bodyItem.position = {
-                x : pos,
-                y: i,
-                pParent: [ innerItem ],
-            }
+              x: pos,
+              y: i,
+              pParent: [innerItem],
+            };
             tempTableItem[pos] = bodyItem;
           }
           break;
@@ -702,6 +863,32 @@ function apiGameEngine(lanes = lanes) {
           innerItem.isARoad = false;
           break;
         }
+        case "Bridge": {
+          innerItem.isMoving = false;
+          innerItem.isDangerous = false;
+          innerItem.isAFood = false;
+          innerItem.isARoad = true;
+          innerItem.size = 1;
+          for (let iter = 0; iter < innerItem.size-1; iter++) {
+            if (direction) {
+              pos--;
+            } else {
+              pos++;
+            }
+            if (pos < 0 || tempTableItem.length <= pos) {
+              continue;
+            }
+            let bodyItem = JSON.parse(JSON.stringify(innerItem));
+            bodyItem.label = "Bridge_Body";
+            bodyItem.position = {
+              x: pos,
+              y: i,
+              pParent: [innerItem],
+            };
+            tempTableItem[pos] = bodyItem;
+          }
+          break;
+        }
         default: {
           console.log("Error Default ");
         }
@@ -710,18 +897,21 @@ function apiGameEngine(lanes = lanes) {
     }
     tableItems.push(tempTableItem);
   }
-  tableItems[currentLane][currentColumn] = new Item("chicken",1,
-                                            true,false,true,
-                                    false,false, { x:currentColumn, y:currentLane});
+  tableItems[currentLane][currentColumn] = new Item("chicken", 1, true, false, true, false, false, { x: currentColumn, y: currentLane });
   let stat = !gameOver;
   //Print Stats from Console Log
+  //debuggingAPI(tableItems);
+  return { statusGame: stat, gridItems: tableItems };
+}
+
+function debuggingAPI(tableItems) {
   let FinaltempStr = "";
   FinaltempStr += "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" + "\n";
-  for (let i = tableItems.length-1; i >= 0 ; i--) {
+  for (let i = tableItems.length - 1; i >= 0; i--) {
     let tempStr = "";
     for (let j = 0; j < tableItems[i].length; j++) {
       let iconDebug = "";
-      if(tableItems[i][j] == undefined){
+      if (tableItems[i][j] == undefined) {
         continue;
       }
       switch (tableItems[i][j].label) {
@@ -765,7 +955,19 @@ function apiGameEngine(lanes = lanes) {
           iconDebug = "#";
           break;
         }
-        default : {
+        case "Bridge": {
+          iconDebug = "?";
+          break;
+        }
+        case "River_Lane_Fixed": {
+          iconDebug = "!";
+          break;
+        }
+        case "Finish_Lane": {
+          iconDebug = "F";
+          break;
+        }
+        default: {
           console.log("Undefined Type !!");
         }
       }
@@ -774,8 +976,8 @@ function apiGameEngine(lanes = lanes) {
     FinaltempStr += tempStr + "\n";
   }
   FinaltempStr += "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" + "\n";
-  //console.log(FinaltempStr);
-  return {statusGame: stat ,gridItems :tableItems};
+  console.log(FinaltempStr);
 }
 
 requestAnimationFrame(animate);
+
