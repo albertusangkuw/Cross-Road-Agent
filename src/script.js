@@ -7,30 +7,30 @@ let isAI = false;
 let isInfiniteGame = true;
 
 aiAgent.onclick = function () {
-  if(this.innerHTML == "AI"){
+  if (this.innerHTML == "AI") {
     this.innerHTML = "No AI";
     this.style.backgroundColor = null;
     isAI = false;
-  } else{
+  } else {
     this.innerHTML = "AI";
     this.style.backgroundColor = "#fcba03";
     isAI = true;
   }
 };
 gameMode.onclick = function () {
-  if(isInfiniteGame){
-    this.innerHTML = "Mode Finish";
+  if (isInfiniteGame) {
+    this.innerHTML = "Mode Infinite";
     isInfiniteGame = false;
     this.style.backgroundColor = "#fcba03";
-    const extendedLane = Math.floor((Math.random() * 2) + 19) ;
-    for (let i = 0; i <extendedLane; i++) {
+    const extendedLane = Math.floor(Math.random() * 2 + 19);
+    for (let i = 0; i < extendedLane; i++) {
       addLane();
     }
     addFinishLane();
     console.log(lanes);
-  } else{
+  } else {
     this.style.backgroundColor = null;
-    this.innerHTML = "Mode Infinite";
+    this.innerHTML = "Mode Finish";
     isInfiniteGame = true;
   }
 };
@@ -118,6 +118,14 @@ const addFinishLane = () => {
 const chicken = new Chicken();
 scene.add(chicken);
 
+const raccoon = [];
+let raccoonMoves = [];
+let raccoonPreviousTimestamp = [];
+let raccoonStartMoving = [];
+let raccoonStepStartTimestamp = [];
+let raccoonLane = [];
+let raccoonColumn = [];
+
 hemiLight = new THREE.HemisphereLight(0xffffff, 0xffffff, 0.6);
 scene.add(hemiLight);
 
@@ -146,8 +154,10 @@ backLight.position.set(200, 200, 50);
 backLight.castShadow = true;
 scene.add(backLight);
 
-const laneTypes = ["Car_Lane", "Truck_Lane", "Forest_Lane","River_Lane_Fixed"];
-//const laneTypes = ["Forest_Lane","Car_Lane"];
+//const laneTypes = ["Car_Lane", "Truck_Lane", "Forest_Lane", "River_Lane_Fixed"];
+const laneTypes = ["Forest_Lane"];
+const botNumber = 4;
+const botPosition = [1, 2, 4, 6];
 const vehicleSize = { Car_Lane: 60, Truck_Lane: 105 };
 const laneSpeeds = [2, 2.5, 3];
 const vehicleColors = [0x428eff, 0xffef42, 0xff7b42, 0xff426b];
@@ -176,6 +186,20 @@ const initaliseValues = () => {
   dirLight.position.x = initialDirLightPositionX;
   dirLight.position.y = initialDirLightPositionY;
 
+  for (let i = 0; i < botNumber; i++) {
+    const newPositionX = (botPosition[i] * positionWidth + positionWidth / 2) * zoom - (boardWidth * zoom) / 2;
+    const newBot = new Raccoon();
+    newBot.position.x = newPositionX;
+    newBot.position.y = 0;
+    raccoon.push(newBot);
+    scene.add(raccoon[raccoon.length - 1]);
+    raccoonLane.push(0);
+    raccoonColumn.push(botPosition[i]);
+    raccoonMoves.push([]);
+    raccoonPreviousTimestamp.push(null);
+    raccoonStepStartTimestamp.push(null);
+    raccoonStartMoving.push(false);
+  }
   winDOM.style.visibility = "hidden";
 };
 
@@ -332,6 +356,24 @@ function Chicken() {
   return chicken;
 }
 
+function Raccoon() {
+  const raccoon = new THREE.Group();
+  raccoon.name = "Raccoon";
+  const body = new THREE.Mesh(new THREE.BoxBufferGeometry(chickenSize * zoom, chickenSize * zoom, 20 * zoom), new THREE.MeshPhongMaterial({ color: 0x50484b, flatShading: true }));
+  body.position.z = 10 * zoom;
+  body.castShadow = true;
+  body.receiveShadow = true;
+  raccoon.add(body);
+
+  const head = new THREE.Mesh(new THREE.BoxBufferGeometry(6 * zoom, 6 * zoom, 2 * zoom), new THREE.MeshLambertMaterial({ color: 0x48302b, flatShading: true }));
+  head.position.z = 21 * zoom;
+  head.castShadow = true;
+  head.receiveShadow = false;
+  raccoon.add(head);
+
+  return raccoon;
+}
+
 function Road() {
   const road = new THREE.Group();
   road.name = "Road";
@@ -378,15 +420,15 @@ function FinishMark() {
   finishMark.name = "Finish_Mark";
   const createSection = (color) => new THREE.Mesh(new THREE.BoxBufferGeometry(boardWidth * zoom, positionWidth * zoom, 3 * zoom), new THREE.MeshPhongMaterial({ color }));
 
-  const middle = createSection(0x231D63);
+  const middle = createSection(0x231d63);
   middle.receiveShadow = true;
   finishMark.add(middle);
 
-  const left = createSection(0x280D8A);
+  const left = createSection(0x280d8a);
   left.position.x = -boardWidth * zoom;
   finishMark.add(left);
 
-  const right = createSection(0x2F2940);
+  const right = createSection(0x2f2940);
   right.position.x = boardWidth * zoom;
   finishMark.add(right);
 
@@ -399,15 +441,15 @@ function River() {
   river.name = "River_Lane";
   const createSection = (color) => new THREE.Mesh(new THREE.BoxBufferGeometry(boardWidth * zoom, positionWidth * zoom, 3 * zoom), new THREE.MeshPhongMaterial({ color }));
 
-  const middle = createSection(0x0081FF);
+  const middle = createSection(0x0081ff);
   middle.receiveShadow = true;
   river.add(middle);
 
-  const left = createSection(0x0081FF);
+  const left = createSection(0x0081ff);
   left.position.x = -boardWidth * zoom;
   river.add(left);
 
-  const right = createSection(0x0081FF);
+  const right = createSection(0x0081ff);
   right.position.x = boardWidth * zoom;
   river.add(right);
 
@@ -418,7 +460,10 @@ function River() {
 function Bridge() {
   const bridge = new THREE.Group();
   bridge.name = "Bridge";
-  const body = new THREE.Mesh(new THREE.BoxBufferGeometry(positionWidth* zoom, positionWidth*zoom,3*zoom), new THREE.MeshPhongMaterial({ color: 0x4D4736, flatShading: true }));
+  const body = new THREE.Mesh(
+    new THREE.BoxBufferGeometry(positionWidth * zoom, positionWidth * zoom, 3 * zoom),
+    new THREE.MeshPhongMaterial({ color: 0x4d4736, flatShading: true })
+  );
   body.position.z = 5;
   body.castShadow = true;
   body.receiveShadow = false;
@@ -427,12 +472,11 @@ function Bridge() {
   return bridge;
 }
 
-
 function Lane(index) {
   this.index = index;
   this.type = index <= 0 ? "Field_Lane" : laneTypes[Math.floor(Math.random() * laneTypes.length)];
-  if(isRiverLastTime == true){
-    this.type =  laneTypes[0];
+  if (isRiverLastTime == true) {
+    this.type = laneTypes[0];
     isRiverLastTime = false;
   }
   switch (this.type) {
@@ -462,7 +506,7 @@ function Lane(index) {
       this.direction = Math.random() >= 0.5;
 
       const occupiedPositions = new Set();
-      this.vehicle = [3,4].map(() => {
+      this.vehicle = [1].map(() => {
         const vehicle = new Car();
         let position;
         do {
@@ -483,7 +527,7 @@ function Lane(index) {
       this.direction = Math.random() >= 0.5;
 
       const occupiedPositions = new Set();
-      this.vehicle = [1 ].map(() => {
+      this.vehicle = [1].map(() => {
         const vehicle = new Truck();
         let position;
         do {
@@ -498,7 +542,7 @@ function Lane(index) {
       this.speed = laneSpeeds[Math.floor(Math.random() * laneSpeeds.length)];
       break;
     }
-    case "River_Lane_Fixed" :{
+    case "River_Lane_Fixed": {
       isRiverLastTime = true;
       this.mesh = new River();
       this.occupiedPositions = new Set();
@@ -517,7 +561,6 @@ function Lane(index) {
     }
   }
 }
-
 
 document.querySelector("#retry").addEventListener("click", () => {
   lanes.forEach((lane) => scene.remove(lane.mesh));
@@ -546,6 +589,22 @@ window.addEventListener("keydown", (event) => {
   } else if (event.keyCode == "39" && !gameOver) {
     // right arrow
     move("right");
+  } else if (event.code == "KeyW" && !gameOver) {
+    // right arrow
+    raccoonMove("forward", 0);
+    raccoonMove("forward", 1);
+  } else if (event.code == "KeyA" && !gameOver) {
+    // right arrow
+    raccoonMove("left", 0);
+    raccoonMove("left", 1);
+  } else if (event.code == "KeyS" && !gameOver) {
+    // right arrow
+    raccoonMove("backward", 0);
+    raccoonMove("backward", 1);
+  } else if (event.code == "KeyD" && !gameOver) {
+    // right arrow
+    raccoonMove("right", 0);
+    raccoonMove("right", 1);
   }
 });
 
@@ -562,7 +621,7 @@ function move(direction) {
   if (direction === "forward") {
     if (lanes[finalPositions.lane + 1].type === "Forest_Lane" && lanes[finalPositions.lane + 1].occupiedPositions.has(finalPositions.column)) return;
     if (!stepStartTimestamp) startMoving = true;
-    if(isInfiniteGame == true)    addLane();
+    if (isInfiniteGame == true) addLane();
   } else if (direction === "backward") {
     if (finalPositions.lane === 0) return;
     if (lanes[finalPositions.lane - 1].type === "Forest_Lane" && lanes[finalPositions.lane - 1].occupiedPositions.has(finalPositions.column)) return;
@@ -577,6 +636,34 @@ function move(direction) {
     if (!stepStartTimestamp) startMoving = true;
   }
   moves.push(direction);
+}
+function raccoonMove(direction, indexRaccoon) {
+  const finalPositions = raccoonMoves[indexRaccoon].reduce(
+    (position, move) => {
+      if (move === "forward") return { lane: position.lane + 1, column: position.column };
+      if (move === "backward") return { lane: position.lane - 1, column: position.column };
+      if (move === "left") return { lane: position.lane, column: position.column - 1 };
+      if (move === "right") return { lane: position.lane, column: position.column + 1 };
+    },
+    { lane: raccoonLane[indexRaccoon], column: raccoonColumn[indexRaccoon] }
+  );
+  if (direction === "forward") {
+    if (lanes[finalPositions.lane + 1].type === "Forest_Lane" && lanes[finalPositions.lane + 1].occupiedPositions.has(finalPositions.column)) return;
+    if (!raccoonStepStartTimestamp[indexRaccoon]) raccoonStartMoving[indexRaccoon] = true;
+  } else if (direction === "backward") {
+    if (finalPositions.lane === 0) return;
+    if (lanes[finalPositions.lane - 1].type === "Forest_Lane" && lanes[finalPositions.lane - 1].occupiedPositions.has(finalPositions.column)) return;
+    if (!raccoonStepStartTimestamp[indexRaccoon]) raccoonStartMoving[indexRaccoon] = true;
+  } else if (direction === "left") {
+    if (finalPositions.column === 0) return;
+    if (lanes[finalPositions.lane].type === "Forest_Lane" && lanes[finalPositions.lane].occupiedPositions.has(finalPositions.column - 1)) return;
+    if (!raccoonStepStartTimestamp[indexRaccoon]) raccoonStartMoving[indexRaccoon] = true;
+  } else if (direction === "right") {
+    if (finalPositions.column === columns - 1) return;
+    if (lanes[finalPositions.lane].type === "Forest_Lane" && lanes[finalPositions.lane].occupiedPositions.has(finalPositions.column + 1)) return;
+    if (!raccoonStepStartTimestamp[indexRaccoon]) raccoonStartMoving[indexRaccoon] = true;
+  }
+  raccoonMoves[indexRaccoon].push(direction);
 }
 
 let tableItemsGlobal;
@@ -678,12 +765,78 @@ function animate(timestamp) {
       stepStartTimestamp = moves.length === 0 ? null : timestamp;
     }
   }
+  for (let i = 0; i < raccoon.length; i++) {
+    if (raccoonStartMoving[i]) {
+      const moveDeltaTime = timestamp - raccoonStepStartTimestamp[i];
+      const moveDeltaDistance = Math.min(moveDeltaTime / stepTime, 1) * positionWidth * zoom;
+      const jumpDeltaDistance = Math.sin(Math.min(moveDeltaTime / stepTime, 1) * Math.PI) * 8 * zoom;
+      //Raccoon / Bot Move Update
+      raccoonStartMoving[i] = false;
+      raccoonStepStartTimestamp[i] = timestamp;
+      let currentLane = raccoonLane[i];
+      let currentColumn = raccoonColumn[i];
+      switch (raccoonMoves[i][0]) {
+        case "forward": {
+          const positionY = currentLane * positionWidth * zoom + moveDeltaDistance;
+          raccoon[i].position.y = positionY; // initial raccoon position is 0
+          raccoon[i].position.z = jumpDeltaDistance;
+          break;
+        }
+        case "backward": {
+          const positionY = currentLane * positionWidth * zoom - moveDeltaDistance;
+          raccoon[i].position.y = positionY;
+          raccoon[i].position.z = jumpDeltaDistance;
+          break;
+        }
+        case "left": {
+          const positionX = (currentColumn * positionWidth + positionWidth / 2) * zoom - (boardWidth * zoom) / 2 - moveDeltaDistance;
+          raccoon[i].position.x = positionX; // initial  raccoon position is 0
+          raccoon[i].position.z = jumpDeltaDistance;
+          break;
+        }
+        case "right": {
+          const positionX = (currentColumn * positionWidth + positionWidth / 2) * zoom - (boardWidth * zoom) / 2 + moveDeltaDistance;
+          raccoon[i].position.x = positionX;
+          raccoon[i].position.z = jumpDeltaDistance;
+          break;
+        }
+      }
+      // Once a step has ended
+
+      switch (raccoonMoves[i][0]) {
+        case "forward": {
+          currentLane++;
+          break;
+        }
+        case "backward": {
+          currentLane--;
+          break;
+        }
+        case "left": {
+          currentColumn--;
+          break;
+        }
+        case "right": {
+          currentColumn++;
+          break;
+        }
+      }
+      raccoonLane[i] = currentLane;
+      raccoonColumn[i] = currentColumn;
+      raccoonMoves[i].shift();
+
+      // If more steps are to be taken then restart counter otherwise stop stepping
+      raccoonStepStartTimestamp[i] = raccoonMoves[0].length === 0 ? null : timestamp;
+    }
+  }
+  // console.log(raccoonMoves);
+  // console.log(raccoonStartMoving);
 
   // Hit test
   if (lanes[currentLane].type === "Car_Lane" || lanes[currentLane].type === "Truck_Lane" || lanes[currentLane].type === "River_Lane_Fixed") {
     const chickenMinX = chicken.position.x - (chickenSize * zoom) / 2;
     const chickenMaxX = chicken.position.x + (chickenSize * zoom) / 2;
-    if(lanes[currentLane].vehicle != undefined) {
+    if (lanes[currentLane].vehicle != undefined) {
       const vehicleLength = vehicleSize[lanes[currentLane].type];
       lanes[currentLane].vehicle.forEach((vehicle) => {
         const carMinX = vehicle.position.x - (vehicleLength * zoom) / 2;
@@ -694,47 +847,157 @@ function animate(timestamp) {
         }
       });
     }
-    if(lanes[currentLane].bridge != undefined) {
+    if (lanes[currentLane].bridge != undefined) {
       let isInBridge = false;
       lanes[currentLane].bridge.forEach((bridge) => {
-        const bridgeMinX = bridge.position.x - (positionWidth*zoom) / 2;
-        const bridgeMaxX = bridge.position.x + (positionWidth*zoom)/2;
+        const bridgeMinX = bridge.position.x - (positionWidth * zoom) / 2;
+        const bridgeMaxX = bridge.position.x + (positionWidth * zoom) / 2;
         if (chickenMaxX > bridgeMinX && chickenMinX < bridgeMaxX) {
           //console.log("In Bridge");
           isInBridge = true;
-        }else{
-         // console.log("Out Bridge");
+        } else {
+          // console.log("Out Bridge");
         }
       });
-      if(isInBridge == false){
+      if (isInBridge == false) {
         gameOver = true;
         endDOM.style.visibility = "visible";
       }
     }
   }
-  if(lanes[currentLane].type == "Finish_Lane"){
+  if (lanes[currentLane].type == "Finish_Lane") {
     gameOver = true;
     winDOM.style.visibility = "visible";
   }
-  //console.log(lanes);
+  // console.log(lanes);
+  // console.log(tableItemsGlobal);
   tableItemsGlobal = refreshGrid2DObjek();
-  debuggingAPI(tableItemsGlobal);
+  //debuggingAPI(tableItemsGlobal);
+  //console.log(raccoon);
   renderer.render(scene, camera);
+}
 
+setInterval(() => {
+  searchChickenGreedy();
+}, 500);
+
+function searchChickenGreedy() {
+  const possibleMove = { forward: "forward", backward: "backward", left: "left", right: "right" };
+  const matrixRoad = [];
+  if (tableItemsGlobal == undefined) {
+    return;
+  }
+  const target = { col: -1, row: -1 };
+  for (let i = 0; i < tableItemsGlobal.length; i++) {
+    const tempMatrix = [];
+    for (let j = 0; j < tableItemsGlobal[i].length; j++) {
+      if (tableItemsGlobal[i][j].isControllable) {
+        tempMatrix.push(3);
+        target.row = i;
+        target.col = j;
+      } else if (tableItemsGlobal[i][j].isARoad) {
+        tempMatrix.push(1);
+      } else {
+        tempMatrix.push(0);
+      }
+    }
+    matrixRoad.push(tempMatrix);
+  }
+  //Greedy with Euclidean distance
+  for (let j = 0; j < matrixRoad.length; j++) {
+    for (let k = 0; k < matrixRoad[j].length; k++) {
+      if (matrixRoad[j][k] == 1) {
+        const a = target.row - j;
+        const b = target.col - k;
+        matrixRoad[j][k] = Math.round(Math.sqrt(a * a + b * b));
+      }
+    }
+  }
+  matrixRoad[target.row][target.col] = "T";
+  for (let i = 0; i < raccoon.length; i++) {
+    let sumber = { col: raccoonColumn[i], row: raccoonLane[i] };
+    if (sumber.col < 0 || sumber.col >= columns) {
+      continue;
+    }
+    matrixRoad[sumber.row][sumber.col] = "R";
+    const choice = getBorderValue(matrixRoad, { row: sumber.row, col: sumber.col });
+    const minVar = getMinimumValueBorder(choice);
+    let executeMessage = "";
+    if (minVar === "bottom") {
+      executeMessage = possibleMove.forward;
+    } else if (minVar === "top") {
+      executeMessage = possibleMove.backward;
+    } else if (minVar === "left") {
+      executeMessage = possibleMove.left;
+    } else if (minVar === "right") {
+      executeMessage = possibleMove.right;
+    } else {
+      console.log("Bot " + (i + 1) + " : No Action");
+    }
+    console.log("Bot " + (i + 1) + " :" + executeMessage);
+    raccoonMove(executeMessage, i);
+  }
+}
+function getBorderValue(array = [[]], idx = { row: -1, col: -1 }) {
+  const borderVal = { top: 0, bottom: 0, left: 0, right: 0 };
+  if (idx.row + 1 < array.length) {
+    borderVal.bottom = array[idx.row + 1][idx.col];
+  }
+  if (idx.row - 1 >= 0) {
+    borderVal.top = array[idx.row - 1][idx.col];
+  }
+  if (idx.col + 1 < array[idx.row].length) {
+    borderVal.right = array[idx.row][idx.col + 1];
+  }
+  if (idx.col - 1 >= 0) {
+    borderVal.left = array[idx.row][idx.col - 1];
+  }
+  return borderVal;
+}
+function getMinimumValueBorder(borderVal = { top: 0, bottom: 0, left: 0, right: 0 }) {
+  let variabelMin = "top";
+  let minimumVal = borderVal.top;
+  //Init
+  if (minimumVal == 0) {
+    variabelMin = "bottom";
+    minimumVal = minimumVal.bottom;
+  }
+  if (minimumVal == 0) {
+    variabelMin = "left";
+    minimumVal = minimumVal.left;
+  }
+  if (minimumVal == 0) {
+    variabelMin = "right";
+    minimumVal = minimumVal.right;
+  }
+
+  if (minimumVal > borderVal.bottom && borderVal.bottom != 0) {
+    variabelMin = "bottom";
+    minimumVal = borderVal.bottom;
+  }
+  if (minimumVal > borderVal.left && borderVal.left != 0) {
+    variabelMin = "left";
+    minimumVal = borderVal.left;
+  }
+  if (minimumVal > borderVal.right && borderVal.right != 0) {
+    variabelMin = "right";
+    minimumVal = borderVal.right;
+  }
+  return variabelMin;
 }
 
 function apiGameEngine() {
   let stat = !gameOver;
   //Print Stats from Console Log
-  //debuggingAPI(tableItems);
   return { statusGame: stat, gridItems: tableItemsGlobal };
 }
+
 function refreshGrid2DObjek() {
   const tableItems = new Array();
-  if(tableItems.length < lanes.length){
-    for (let i =tableItems.length; i <lanes.length ; i++) {
+  if (tableItems.length < lanes.length) {
+    for (let i = tableItems.length; i < lanes.length; i++) {
       tableItems.push(new Array(columns));
-      for (let j = 0; j <tableItems[i].length ; j++) {
+      for (let j = 0; j < tableItems[i].length; j++) {
         tableItems[i][j] = new Item();
       }
     }
@@ -744,7 +1007,7 @@ function refreshGrid2DObjek() {
     //ke kiri True
     //ke kanan False
     let direction = "";
-    for (let j = 0; j < columns ; j++) {
+    for (let j = 0; j < columns; j++) {
       tableItems[i][j].label = lanes[i].type;
       tableItems[i][j].position.x = -1;
       tableItems[i][j].position.y = i;
@@ -767,7 +1030,7 @@ function refreshGrid2DObjek() {
           break;
         }
         case "Car_Lane": {
-          childLane =  lanes[i].vehicle;
+          childLane = lanes[i].vehicle;
           tableItems[i][j].isARoad = true;
           tableItems[i][j].isAFood = false;
           tableItems[i][j].isDangerous = false;
@@ -776,7 +1039,7 @@ function refreshGrid2DObjek() {
           break;
         }
         case "Truck_Lane": {
-          childLane =lanes[i].vehicle;
+          childLane = lanes[i].vehicle;
           tableItems[i][j].isARoad = true;
           tableItems[i][j].isAFood = false;
           tableItems[i][j].isDangerous = false;
@@ -807,9 +1070,9 @@ function refreshGrid2DObjek() {
       }
     }
     for (let j = 0; j < childLane.length; j++) {
-      let pos = (Math.floor(-((positionWidth - boardWidth - childLane[j].position.x) / zoom / positionWidth)));
+      let pos = Math.floor(-((positionWidth - boardWidth - childLane[j].position.x) / zoom / positionWidth));
       let sizeItem = 0;
-      if(pos < 0 || pos >= columns){
+      if (pos < 0 || pos >= columns) {
         continue;
       }
       tableItems[i][pos].label = childLane[j].name;
@@ -825,7 +1088,7 @@ function refreshGrid2DObjek() {
 
           tableItems[i][pos].size = Math.ceil(vehicleSize.Truck_Lane / positionWidth);
           sizeItem = tableItems[i][pos].size;
-          for (let iter = 0; iter < sizeItem ; iter++) {
+          for (let iter = 0; iter < sizeItem; iter++) {
             if (direction) {
               pos++;
             } else {
@@ -839,10 +1102,10 @@ function refreshGrid2DObjek() {
             tableItems[i][pos].position.y = i;
             tableItems[i][pos].position.pParent = [tableItems[i][pos]];
 
-            tableItems[i][pos].isMoving = tableItems[i][pos].isMoving ;
+            tableItems[i][pos].isMoving = tableItems[i][pos].isMoving;
             tableItems[i][pos].isDangerous = tableItems[i][pos].isDangerous;
-            tableItems[i][pos].isAFood = tableItems[i][pos].isAFood ;
-            tableItems[i][pos].isARoad = tableItems[i][pos].isARoad ;
+            tableItems[i][pos].isAFood = tableItems[i][pos].isAFood;
+            tableItems[i][pos].isARoad = tableItems[i][pos].isARoad;
           }
           break;
         }
@@ -853,7 +1116,7 @@ function refreshGrid2DObjek() {
           tableItems[i][pos].isARoad = false;
           tableItems[i][pos].size = Math.ceil(vehicleSize.Car_Lane / positionWidth);
           sizeItem = tableItems[i][pos].size;
-          for (let iter = 0; iter <  sizeItem ; iter++) {
+          for (let iter = 0; iter < sizeItem; iter++) {
             if (direction) {
               pos++;
             } else {
@@ -867,10 +1130,10 @@ function refreshGrid2DObjek() {
             tableItems[i][pos].position.y = i;
             tableItems[i][pos].position.pParent = [tableItems[i][j]];
 
-            tableItems[i][pos].isMoving = tableItems[i][pos].isMoving ;
+            tableItems[i][pos].isMoving = tableItems[i][pos].isMoving;
             tableItems[i][pos].isDangerous = tableItems[i][pos].isDangerous;
-            tableItems[i][pos].isAFood = tableItems[i][pos].isAFood ;
-            tableItems[i][pos].isARoad = tableItems[i][pos].isARoad ;
+            tableItems[i][pos].isAFood = tableItems[i][pos].isAFood;
+            tableItems[i][pos].isARoad = tableItems[i][pos].isARoad;
           }
           break;
         }
@@ -888,7 +1151,7 @@ function refreshGrid2DObjek() {
           tableItems[i][pos].isARoad = true;
           tableItems[i][pos].size = 1;
           sizeItem = tableItems[i][pos].size;
-          for (let iter = 0; iter <  sizeItem-1; iter++) {
+          for (let iter = 0; iter < sizeItem - 1; iter++) {
             if (direction) {
               pos--;
             } else {
@@ -901,10 +1164,10 @@ function refreshGrid2DObjek() {
             tableItems[i][pos].position.y = i;
             tableItems[i][pos].pParent = tableItems[i][j];
 
-            tableItems[i][pos].isMoving = tableItems[i][pos].isMoving ;
+            tableItems[i][pos].isMoving = tableItems[i][pos].isMoving;
             tableItems[i][pos].isDangerous = tableItems[i][pos].isDangerous;
-            tableItems[i][pos].isAFood = tableItems[i][pos].isAFood ;
-            tableItems[i][pos].isARoad = tableItems[i][pos].isARoad ;
+            tableItems[i][pos].isAFood = tableItems[i][pos].isAFood;
+            tableItems[i][pos].isARoad = tableItems[i][pos].isARoad;
           }
           break;
         }
@@ -914,14 +1177,34 @@ function refreshGrid2DObjek() {
       }
     }
   }
-  tableItems[currentLane][currentColumn].label = "chicken" ;
-  tableItems[currentLane][currentColumn].isControllable = true ;
-  tableItems[currentLane][currentColumn].isDangerous = false ;
-  tableItems[currentLane][currentColumn].isMoving = true ;
-  tableItems[currentLane][currentColumn].isARoad = true ;
-  tableItems[currentLane][currentColumn].isAFood = false ;
+  //console.log(raccoon);
+  for (let i = 0; i < raccoon.length; i++) {
+    let pos = raccoonColumn[i];
+    const posLane = raccoonLane[i];
+    if (pos < 0 || pos > columns) {
+      continue;
+    }
+    // if (tableItems[posLane][pos] == undefined) {
+    //   console.log(tableItems[posLane][pos]);
+    //   continue;
+    // }
+    tableItems[posLane][pos].label = "Raccoon";
+    tableItems[posLane][pos].isMoving = true;
+    tableItems[posLane][pos].isDangerous = true;
+    tableItems[posLane][pos].isAFood = false;
+    tableItems[posLane][pos].isARoad = false;
+    tableItems[posLane][pos].isControllable = false;
+    tableItems[posLane][pos].position.x = pos;
+    tableItems[posLane][pos].position.y = posLane;
+  }
+  tableItems[currentLane][currentColumn].label = "chicken";
+  tableItems[currentLane][currentColumn].isControllable = true;
+  tableItems[currentLane][currentColumn].isDangerous = false;
+  tableItems[currentLane][currentColumn].isMoving = true;
+  tableItems[currentLane][currentColumn].isARoad = true;
+  tableItems[currentLane][currentColumn].isAFood = false;
   tableItems[currentLane][currentColumn].position.x = currentColumn; // ? kebalik ?
-  tableItems[currentLane][currentColumn].position.y = currentLane ;
+  tableItems[currentLane][currentColumn].position.y = currentLane;
   return tableItems;
 }
 
@@ -992,8 +1275,12 @@ function debuggingAPI(tableItems) {
           iconDebug = "C";
           break;
         }
+        case "Raccoon": {
+          iconDebug = "E";
+          break;
+        }
         default: {
-          console.log("Undefined Type !! :" + tableItems[i][j].label );
+          console.log("Undefined Type !! :" + tableItems[i][j].label);
         }
       }
       tempStr += iconDebug;
@@ -1006,3 +1293,28 @@ function debuggingAPI(tableItems) {
 
 requestAnimationFrame(animate);
 
+class Item {
+  constructor(
+    label = "",
+    size = 1,
+    isControllable = false,
+    isDangerous = false,
+    isMoving = false,
+    isARoad = false,
+    isAFood = false,
+    position = { x: -1, y: -1, pParent: [] },
+    status = 0,
+    cost = 0
+  ) {
+    this.label = label;
+    this.status = status;
+    this.cost = cost;
+    this.size = size;
+    this.isControllable = isControllable;
+    this.isDangerous = isDangerous;
+    this.isMoving = isMoving;
+    this.isARoad = isARoad;
+    this.isAFood = isAFood;
+    this.position = position;
+  }
+}

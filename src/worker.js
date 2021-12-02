@@ -2,6 +2,7 @@ let destination = { col: -1, row: -1 };
 let currentPos = { col: -1, row: -1 };
 let trajectoryDestination = [];
 let finalDestination  = { col: -1, row: -1};
+const possibleMove = { forward: "forward", backward: "backward", left: "left", right: "right" , hold:"hold"};
 onmessage = function (e) {
   //console.log("Worker Agent: Message received from main script ");
   const gameData = e.data;
@@ -46,6 +47,7 @@ onmessage = function (e) {
     }
   }
 
+  //Pengecheckan apakah dalam posisi berbahaya
   const reflexOrder = reflexAgent(itemData);
   if (reflexOrder.row != currentPos.row || reflexOrder.col != currentPos.col) {
     const executeMessage = executeOrder(reflexOrder, binaryTable);
@@ -58,6 +60,7 @@ onmessage = function (e) {
   }
   //return;
   const gridAStar = new Array(binaryTable.length);
+  //Pre Proccessing Grid A Star
   for (let i = 0; i < binaryTable.length; i++) {
     const tempGrid = new Array(binaryTable[i].length);
     for (let j = 0; j < binaryTable[i].length; j++) {
@@ -70,8 +73,9 @@ onmessage = function (e) {
     gridAStar[i] = tempGrid;
   }
 
-  //Mencari Tujuan dan mencari jalan yang bisa dilalui
+  // Apakah sudah ada ada jalan sebelumnya 
   if(trajectoryDestination.length == 0) {
+    //Mencari Tujuan dan mencari jalan yang bisa dilalui
     const arrDestination = chooseDestination(binaryTable);
     for (let i = 0; i < arrDestination.length; i++) {
       const start = [currentPos.row, currentPos.col];
@@ -112,10 +116,14 @@ onmessage = function (e) {
 
   //Melakukan Eksekusi
   if(trajectoryDestination == undefined || trajectoryDestination.length == 0){
-    postMessage("hold");
+    postMessage(possibleMove.hold);
   }
   const nextStep = trajectoryDestination.pop();
-  postMessage(executeOrder(nextStep, binaryTable));
+  const order = executeOrder(nextStep, binaryTable);
+  if(order == possibleMove.hold ){
+    trajectoryDestination = [];
+  }
+  postMessage(order);
 };
 function SegmentationDangerItem(gridBinary = [], cols = -1, rows = -1, value = -1) {
   if (gridBinary.length > rows + 1) {
@@ -133,8 +141,7 @@ function SegmentationDangerItem(gridBinary = [], cols = -1, rows = -1, value = -
   return gridBinary;
 }
 function executeOrder(nextStep, binaryTable) {
-  const possibleMove = { forward: "forward", backward: "backward", left: "left", right: "right" };
-  let executeMessage = "hold";
+  let executeMessage = possibleMove.hold;
   if(nextStep == undefined || nextStep.row == undefined || nextStep.col == undefined){
     return executeMessage;
   }
@@ -384,7 +391,10 @@ function loggingTable(tableItems = []) {
           iconDebug = "E";
           break;
         }
-
+        case "Raccoon": {
+          iconDebug = "R";
+          break;
+        }
         default: {
           console.log("Undefined Type !!" + tableItems[i][j].label);
         }
