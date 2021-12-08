@@ -1,8 +1,10 @@
 let destination = { col: -1, row: -1 };
 let currentPos = { col: -1, row: -1 };
 let trajectoryDestination = [];
-let finalDestination  = { col: -1, row: -1};
-const possibleMove = { forward: "forward", backward: "backward", left: "left", right: "right" , hold:"hold"};
+let finalDestination = { col: -1, row: -1 };
+const possibleMove = { forward: "forward", backward: "backward", left: "left", right: "right", hold: "hold" };
+self.importScripts("astar.js");
+self.importScripts("nodeelement.js");
 onmessage = function (e) {
   //console.log("Worker Agent: Message received from main script ");
   const gameData = e.data;
@@ -33,7 +35,7 @@ onmessage = function (e) {
         binaryTable[i][j] = 0;
       }
       //Status 3 Adalah Item Finish
-      if(itemData[i][j].status == 3){
+      if (itemData[i][j].status == 3) {
         itemData[i][j].status = 1;
         binaryTable[i][j] = 1;
         finalDestination.row = i;
@@ -54,7 +56,7 @@ onmessage = function (e) {
     if (executeMessage != "hold") {
       postMessage(executeMessage);
       return;
-    }else{
+    } else {
       console.log("No Reflex");
     }
   }
@@ -73,8 +75,8 @@ onmessage = function (e) {
     gridAStar[i] = tempGrid;
   }
 
-  // Apakah sudah ada ada jalan sebelumnya 
-  if(trajectoryDestination.length == 0) {
+  // Apakah sudah ada ada jalan sebelumnya
+  if (trajectoryDestination.length == 0) {
     //Mencari Tujuan dan mencari jalan yang bisa dilalui
     const arrDestination = chooseDestination(binaryTable);
     for (let i = 0; i < arrDestination.length; i++) {
@@ -108,19 +110,18 @@ onmessage = function (e) {
         break;
       }
     }
-
   }
   //console.log(itemData);
   loggingTable(itemData);
   //console.log(currentPos);
 
   //Melakukan Eksekusi
-  if(trajectoryDestination == undefined || trajectoryDestination.length == 0){
+  if (trajectoryDestination == undefined || trajectoryDestination.length == 0) {
     postMessage(possibleMove.hold);
   }
   const nextStep = trajectoryDestination.pop();
   const order = executeOrder(nextStep, binaryTable);
-  if(order == possibleMove.hold ){
+  if (order == possibleMove.hold) {
     trajectoryDestination = [];
   }
   postMessage(order);
@@ -142,7 +143,7 @@ function SegmentationDangerItem(gridBinary = [], cols = -1, rows = -1, value = -
 }
 function executeOrder(nextStep, binaryTable) {
   let executeMessage = possibleMove.hold;
-  if(nextStep == undefined || nextStep.row == undefined || nextStep.col == undefined){
+  if (nextStep == undefined || nextStep.row == undefined || nextStep.col == undefined) {
     return executeMessage;
   }
   // X = row
@@ -158,7 +159,6 @@ function executeOrder(nextStep, binaryTable) {
   }
   return executeMessage;
 }
-
 function reflexAgent(itemData) {
   // [1, 1, 1, 1, 1]
   // [1, 0, 0, 0, 1] // tidak bisa ke atas
@@ -174,24 +174,24 @@ function reflexAgent(itemData) {
   let canGoDown = true;
   let reflexOrder = { row: currentPos.row, col: currentPos.col };
   if (
-      currentPos.row + 1 < itemData.length &&
-      currentPos.col - 1 >= 0 &&
-      itemData[currentPos.row + 1][currentPos.col - 1].isDangerous &&
-      itemData[currentPos.row + 1][currentPos.col - 1].isMoving
+    currentPos.row + 1 < itemData.length &&
+    currentPos.col - 1 >= 0 &&
+    itemData[currentPos.row + 1][currentPos.col - 1].isDangerous &&
+    itemData[currentPos.row + 1][currentPos.col - 1].isMoving
   ) {
     console.log("Sebelah Kiri Atas");
-    canGoUp =false;
+    canGoUp = false;
     canGoLeft = false;
   }
   if (
-      currentPos.row + 1 < itemData.length &&
-      currentPos.col < itemData[currentPos.row + 1].length &&
-      itemData[currentPos.row + 1][currentPos.col].isDangerous &&
-      itemData[currentPos.row + 1][currentPos.col].isMoving
+    currentPos.row + 1 < itemData.length &&
+    currentPos.col < itemData[currentPos.row + 1].length &&
+    itemData[currentPos.row + 1][currentPos.col].isDangerous &&
+    itemData[currentPos.row + 1][currentPos.col].isMoving
   ) {
     console.log("Sebelah Atas");
     // tidak bisa ke bawah
-    canGoUp = false
+    canGoUp = false;
   }
 
   if (
@@ -206,20 +206,20 @@ function reflexAgent(itemData) {
     canGoRight = false;
   }
   if (
-      currentPos.row < itemData.length &&
-      currentPos.col - 1 >= 0 &&
-      itemData[currentPos.row][currentPos.col - 1].isDangerous &&
-      itemData[currentPos.row][currentPos.col - 1].isMoving
+    currentPos.row < itemData.length &&
+    currentPos.col - 1 >= 0 &&
+    itemData[currentPos.row][currentPos.col - 1].isDangerous &&
+    itemData[currentPos.row][currentPos.col - 1].isMoving
   ) {
     console.log("Sebelah Kiri");
     // tidak bisa ke kanan dan kiri
     canGoLeft = false;
   }
   if (
-      currentPos.row < itemData.length &&
-      currentPos.col + 1 < itemData[currentPos.row].length &&
-      itemData[currentPos.row][currentPos.col + 1].isDangerous &&
-      itemData[currentPos.row][currentPos.col + 1].isMoving
+    currentPos.row < itemData.length &&
+    currentPos.col + 1 < itemData[currentPos.row].length &&
+    itemData[currentPos.row][currentPos.col + 1].isDangerous &&
+    itemData[currentPos.row][currentPos.col + 1].isMoving
   ) {
     // tidak bisa ke kanan dan kiri
     console.log("Sebelah Kanan");
@@ -272,7 +272,7 @@ function reflexAgent(itemData) {
       reflexOrder.col = currentPos.col + 1;
       loggingReflex = "right";
     }
-    if(loggingReflex != ""){
+    if (loggingReflex != "") {
       console.log("Reflex Override");
       console.log(loggingReflex);
     }
@@ -292,7 +292,7 @@ function make2DArray(col = 0, row = 0, defaultValue = 0) {
 }
 function chooseDestination(binaryTable = []) {
   let arrDestination = [];
-  if(finalDestination.col != -1 && finalDestination.row != -1 && currentPos.row +3 > finalDestination.row){
+  if (finalDestination.col != -1 && finalDestination.row != -1 && currentPos.row + 3 > finalDestination.row) {
     arrDestination.push(finalDestination);
     return arrDestination;
   }
@@ -406,155 +406,3 @@ function loggingTable(tableItems = []) {
   FinaltempStr += "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" + "\n";
   console.log(FinaltempStr);
 }
-
-class AStar {
-  constructor(start, end, grid) {
-    this.grid = grid;
-    this.matrixLenght = this.grid.length;
-    this.nodes = [];
-    for (let i = 0; i < grid.length; i++) {
-      for (let j = 0; j < grid[0].length; j++) {
-        if (i == start[0] && j == start[1]) {
-          this.start = new NodeElement(i, j, grid[i][j].difficulty, grid[i][j].wall, this);
-          this.nodes.push(this.start);
-        } else if (i == end[0] && j == end[1]) {
-          this.end = new NodeElement(i, j, grid[i][j].difficulty, grid[i][j].wall, this);
-          this.nodes.push(this.end);
-        } else {
-          this.nodes.push(new NodeElement(i, j, grid[i][j].difficulty, grid[i][j].wall, this));
-        }
-      }
-    }
-    if(this.start == undefined ){
-      console.log(start);
-    }
-    if(this.end == undefined ){
-      console.log(end);
-    }
-    this.openQueue = [this.start];
-    this.alreadyChecked = [];
-
-    this.optimalPath = [];
-  }
-
-  startAlgorithm() {
-    this.openQueue[0].heuristicCalculation(this.openQueue[0]);
-
-    while (this.openQueue.length > 0) {
-      if (this.openQueue[0] === this.end) {
-        break;
-      }
-      let neighbours = this.openQueue[0].neighboursCalculation(this.openQueue);
-      let queue = this.openQueue;
-      this.alreadyChecked.push(queue.shift());
-      let newQueue = queue.concat(neighbours);
-      let sortedNeighbours = newQueue.sort(function (a, b) {
-        return a.heuristic - b.heuristic;
-      });
-      this.openQueue = sortedNeighbours;
-    }
-    if (this.openQueue.length !== 0) {
-      this.retrieveOptimalPath(this.openQueue[0]);
-    }
-  }
-
-  retrieveOptimalPath(node) {
-    this.optimalPath.push(node);
-    if (node.through !== this.start) {
-      this.retrieveOptimalPath(node.through);
-    } else {
-      this.optimalPath.push(this.start);
-    }
-  }
-
-  eucledianDistance(node) {
-    return Math.sqrt(Math.pow(Math.abs(node.row - this.end.row), 2) + Math.pow(Math.abs(node.col - this.end.col), 2));
-  }
-}
-class NodeElement {
-  constructor(row, col, difficulty, isWall, aStarInstance) {
-    this.row = row;
-    this.col = col;
-    this.wall = isWall;
-    this.difficulty = difficulty;
-    this.through = "";
-    this.heuristic = Infinity;
-    this.eucledianDistance = Infinity;
-    this.difficultySums = "";
-    this.aStar = aStarInstance;
-    this.neighbours = [];
-  }
-
-  heuristicCalculation(node) {
-    this.eucledianDistance = this.aStar.eucledianDistance(this);
-    let difficultySums;
-    difficultySums = this.difficulty + Number(node.difficultySums);
-    if (this.difficultySums === "") {
-      this.difficultySums = difficultySums;
-      this.through = node;
-    } else if (this.difficultySums > difficultySums) {
-      this.difficultySums = difficultySums;
-      this.through = node;
-    } else {
-    }
-
-    return (this.heuristic = this.eucledianDistance + this.difficultySums);
-  }
-
-  neighboursCalculation(openQueue) {
-    let neighbours = [];
-    let enqueuedNode;
-    let newNode;
-
-    if (this.row < this.aStar.matrixLenght - 1) {
-      enqueuedNode = openQueue.find((node) => node.row === this.row + 1 && node.col === this.col);
-      if (!enqueuedNode) {
-        newNode = this.aStar.nodes.find((node) => node.row === this.row + 1 && node.col === this.col);
-        if (newNode.wall === false && !this.aStar.alreadyChecked.includes(newNode) && !this.aStar.openQueue.includes(newNode)) {
-          newNode.heuristicCalculation(this);
-          neighbours.push(newNode);
-        }
-      } else {
-        enqueuedNode.heuristicCalculation(this);
-      }
-    }
-    if (this.col < this.aStar.matrixLenght - 1) {
-      enqueuedNode = openQueue.find((node) => node.row === this.row && node.col === this.col + 1);
-      if (!enqueuedNode) {
-        newNode = this.aStar.nodes.find((node) => node.row === this.row && node.col === this.col + 1);
-        if (newNode.wall === false && !this.aStar.alreadyChecked.includes(newNode) && !this.aStar.openQueue.includes(newNode)) {
-          newNode.heuristicCalculation(this);
-          neighbours.push(newNode);
-        }
-      } else {
-        enqueuedNode.heuristicCalculation(this);
-      }
-    }
-    if (this.row > 0) {
-      enqueuedNode = openQueue.find((node) => node.row === this.row - 1 && node.col === this.col);
-      if (!enqueuedNode) {
-        newNode = this.aStar.nodes.find((node) => node.row === this.row - 1 && node.col === this.col);
-        if (newNode.wall === false && !this.aStar.alreadyChecked.includes(newNode) && !this.aStar.openQueue.includes(newNode)) {
-          newNode.heuristicCalculation(this);
-          neighbours.push(newNode);
-        }
-      } else {
-        enqueuedNode.heuristicCalculation(this);
-      }
-    }
-    if (this.col > 0) {
-      enqueuedNode = openQueue.find((node) => node.row === this.row && node.col === this.col - 1);
-      if (!enqueuedNode) {
-        newNode = this.aStar.nodes.find((node) => node.row === this.row && node.col === this.col - 1);
-        if (newNode.wall === false && !this.aStar.alreadyChecked.includes(newNode) && !this.aStar.openQueue.includes(newNode)) {
-          newNode.heuristicCalculation(this);
-          neighbours.push(newNode);
-        }
-      } else {
-        enqueuedNode.heuristicCalculation(this);
-      }
-    }
-    return neighbours;
-  }
-}
-

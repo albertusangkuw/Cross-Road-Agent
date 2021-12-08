@@ -155,9 +155,9 @@ backLight.castShadow = true;
 scene.add(backLight);
 
 //const laneTypes = ["Car_Lane", "Truck_Lane", "Forest_Lane", "River_Lane_Fixed"];
-const laneTypes = ["Forest_Lane"];
-const botNumber = 4;
-const botPosition = [1, 2, 4, 6];
+const laneTypes = ["Forest_Lane", "Car_Lane"];
+const botNumber = 1;
+const botPosition = [2];
 const vehicleSize = { Car_Lane: 60, Truck_Lane: 105 };
 const laneSpeeds = [2, 2.5, 3];
 const vehicleColors = [0x428eff, 0xffef42, 0xff7b42, 0xff426b];
