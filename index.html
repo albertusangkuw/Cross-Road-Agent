@@ -72,18 +72,27 @@
         <div class="form-group row">
           <label for="stepChicken" class="col-sm-4 col-form-label">Step Time Chicken</label>
           <div class="col-sm-8">
-            <input type="number" id="stepChicken" value="200" min="100" max="1000">
+            <input type="number" id="stepChicken" value="200" min="100" max="1000">milisecond
+          </div>
+        </div>
+        <div class="form-group row">
+          <label for="eggStatus" class="col-sm-4 col-form-label">Egg Status</label>
+          <div class="col-sm-8">
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" id="eggStatus" checked>
+              <label class="form-check-label" for="checkForest">Show</label>
+            </div>
           </div>
         </div>
         <div class="form-group row">
           <label for="stepChicken" class="col-sm-4 col-form-label">Tipe Lane</label>
           <div class="col-sm-8">
             <div class="form-check form-check-inline">
-              <input class="form-check-input" type="checkbox" id="checkForest" value="Forest Lane" disabled>
+              <input class="form-check-input" type="checkbox" id="checkForest" value="Forest Lane" checked>
               <label class="form-check-label" for="checkForest">Forest Lane</label>
             </div>
             <div class="form-check form-check-inline">
-              <input class="form-check-input" type="checkbox" id="checkCar" value="Car_Lane">
+              <input class="form-check-input" type="checkbox" id="checkCar" value="Car_Lane" checked>
               <label class="form-check-label" for="checkCar">Car Lane</label>
             </div>
             <div class="form-check form-check-inline">
@@ -106,7 +115,7 @@
         <div class="form-group row">
           <label for="stepRaccoon" class="col-sm-4 col-form-label">Step Time Rakun</label>
           <div class="col-sm-8">
-            <input type="number" id="stepRaccoon" value="500" min="100" max="1000">
+            <input type="number" id="stepRaccoon" value="650" min="100" max="1000">milisecond
           </div>
         </div>
       </div>
@@ -119,7 +128,7 @@
 </div>
 <div id="end">
   <button id="retry">Retry</button>
-  <button id="win">Congratulations<button>
+  <button id="win">Congratulations</button>
 </div>
 
 
@@ -129,8 +138,9 @@
 </svg> & 🐓 , Guardians of The Galaxy
 </div>
   <script src='./static/lib/three.js'></script>
-  <script  src="./src/script.js"></script>
   <script  src="./src/item.js"></script>
+  <script  src="./src/script.js"></script>
+  <script  src="./src/raccoon.js"></script>
   <script src="./src/main.js"></script>
 </body>
 </html>

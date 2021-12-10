@@ -2,6 +2,7 @@ let destination = { col: -1, row: -1 };
 let currentPos = { col: -1, row: -1 };
 let trajectoryDestination = [];
 let finalDestination = { col: -1, row: -1 };
+let lookAHead = 1;
 const possibleMove = { forward: "forward", backward: "backward", left: "left", right: "right", hold: "hold" };
 self.importScripts("astar.js");
 self.importScripts("nodeelement.js");
@@ -66,10 +67,12 @@ onmessage = function (e) {
   for (let i = 0; i < binaryTable.length; i++) {
     const tempGrid = new Array(binaryTable[i].length);
     for (let j = 0; j < binaryTable[i].length; j++) {
-      if (binaryTable[i][j] == 1) {
+      if (binaryTable[i][j] == 2) {
         tempGrid[j] = { wall: false, difficulty: 1 };
+      }else  if (binaryTable[i][j] == 1) {
+        tempGrid[j] = { wall: false, difficulty: 5 };
       } else {
-        tempGrid[j] = { wall: true, difficulty: 1 };
+        tempGrid[j] = { wall: true, difficulty: 0 };
       }
     }
     gridAStar[i] = tempGrid;
@@ -78,11 +81,12 @@ onmessage = function (e) {
   // Apakah sudah ada ada jalan sebelumnya
   if (trajectoryDestination.length == 0) {
     //Mencari Tujuan dan mencari jalan yang bisa dilalui
+    lookAHead = Math.floor(Math.random() * 5) + 1;
     const arrDestination = chooseDestination(binaryTable);
     for (let i = 0; i < arrDestination.length; i++) {
       const start = [currentPos.row, currentPos.col];
       const end = [arrDestination[i].row, arrDestination[i].col];
-      let aStarInstance = new AStar(start, end, gridAStar);
+      let aStarInstance;
       let optimalPath = [];
       try {
         aStarInstance = new AStar(start, end, gridAStar);
@@ -112,16 +116,18 @@ onmessage = function (e) {
     }
   }
   //console.log(itemData);
-  loggingTable(itemData);
+  //loggingTable(itemData);
   //console.log(currentPos);
 
   //Melakukan Eksekusi
   if (trajectoryDestination == undefined || trajectoryDestination.length == 0) {
+    console.log("Hold 122");
     postMessage(possibleMove.hold);
   }
   const nextStep = trajectoryDestination.pop();
   const order = executeOrder(nextStep, binaryTable);
   if (order == possibleMove.hold) {
+    console.log("Hold 128");
     trajectoryDestination = [];
   }
   postMessage(order);
@@ -148,13 +154,13 @@ function executeOrder(nextStep, binaryTable) {
   }
   // X = row
   // Y = col
-  if (nextStep.row > currentPos.row && binaryTable[nextStep.row][currentPos.col] == 1) {
+  if (nextStep.row > currentPos.row && binaryTable[nextStep.row][currentPos.col] > 0) {
     executeMessage = possibleMove.forward;
-  } else if (nextStep.row < currentPos.row && binaryTable[nextStep.row][currentPos.col] == 1) {
+  } else if (nextStep.row < currentPos.row && binaryTable[nextStep.row][currentPos.col] > 0 ) {
     executeMessage = possibleMove.backward;
-  } else if (nextStep.col > currentPos.col && binaryTable[currentPos.row][nextStep.col] == 1) {
+  } else if (nextStep.col > currentPos.col && binaryTable[currentPos.row][nextStep.col] > 0) {
     executeMessage = possibleMove.right;
-  } else if (nextStep.col < currentPos.col && binaryTable[currentPos.row][currentPos.col] == 1) {
+  } else if (nextStep.col < currentPos.col && binaryTable[currentPos.row][currentPos.col] > 0) {
     executeMessage = possibleMove.left;
   }
   return executeMessage;
@@ -292,13 +298,19 @@ function make2DArray(col = 0, row = 0, defaultValue = 0) {
 }
 function chooseDestination(binaryTable = []) {
   let arrDestination = [];
-  if (finalDestination.col != -1 && finalDestination.row != -1 && currentPos.row + 3 > finalDestination.row) {
+  if (finalDestination.col != -1 && finalDestination.row != -1 && currentPos.row + lookAHead > finalDestination.row) {
     arrDestination.push(finalDestination);
+    console.log("Found FInal destination");
     return arrDestination;
   }
-  for (let i = currentPos.row + 3; i > currentPos.row; i--) {
+  for (let i = currentPos.row + lookAHead; i > currentPos.row; i--) {
     for (let j = Math.round(binaryTable[i].length / 2); j < binaryTable[i].length; j++) {
-      if (binaryTable[i][j] == 1) {
+      if(binaryTable[i][j] == 2){
+        let destination = { row: -1, col: -1 };
+        destination.row = i;
+        destination.col = j;
+        arrDestination.unshift(destination);
+      }else if (binaryTable[i][j] == 1) {
         let destination = { row: -1, col: -1 };
         destination.row = i;
         destination.col = j;
@@ -306,7 +318,12 @@ function chooseDestination(binaryTable = []) {
       }
     }
     for (let j = 0; j < Math.round(binaryTable[i].length / 2); j++) {
-      if (binaryTable[i][j] == 1) {
+      if(binaryTable[i][j] == 2){
+        let destination = { row: -1, col: -1 };
+        destination.row = i;
+        destination.col = j;
+        arrDestination.unshift(destination);
+      }else if (binaryTable[i][j] == 1) {
         let destination = { row: -1, col: -1 };
         destination.row = i;
         destination.col = j;
@@ -389,6 +406,10 @@ function loggingTable(tableItems = []) {
         }
         case "Finish_Lane": {
           iconDebug = "E";
+          break;
+        }
+        case "Egg": {
+          iconDebug = "G";
           break;
         }
         case "Raccoon": {
