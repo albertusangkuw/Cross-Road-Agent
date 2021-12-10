@@ -154,9 +154,10 @@ backLight.position.set(200, 200, 50);
 backLight.castShadow = true;
 scene.add(backLight);
 
-let laneTypes = ["Forest_Lane", "Car_Lane", "Truck_Lane",  "River_Lane_Fixed"];
+let laneTypes = ["Forest_Lane", "Car_Lane", "Truck_Lane", "River_Lane_Fixed"];
 //let laneTypes = ["Forest_Lane","Car_Lane" , "River_Lane_Fixed"];
 let botNumber = 1;
+let eggPosition = [];
 let botPosition = [2];
 let stepBot = 600;
 let eggStatus = true;
@@ -166,13 +167,13 @@ const vehicleColors = [0x428eff, 0xffef42, 0xff7b42, 0xff426b];
 const treeHeights = [20, 45, 60];
 let isRiverLastTime = false;
 function updateSettings() {
-   const checkRiver = document.getElementById("checkRiver").checked;
-   const checkTruck = document.getElementById("checkTruck").checked;
-   const checkCar = document.getElementById("checkCar").checked;
-   const eggStatus = document.getElementById("eggStatus").checked;
-   const botRaccoonSize = document.getElementById("botRaccoonSize").value;
-   const stepRaccoon = document.getElementById("stepRaccoon").value;
-   const stepChicken = document.getElementById("stepChicken").value;
+  const checkRiver = document.getElementById("checkRiver").checked;
+  const checkTruck = document.getElementById("checkTruck").checked;
+  const checkCar = document.getElementById("checkCar").checked;
+  const eggStatus = document.getElementById("eggStatus").checked;
+  const botRaccoonSize = document.getElementById("botRaccoonSize").value;
+  const stepRaccoon = document.getElementById("stepRaccoon").value;
+  const stepChicken = document.getElementById("stepChicken").value;
   localStorage.setItem("checkRiver", checkRiver);
   localStorage.setItem("checkTruck", checkTruck);
   localStorage.setItem("checkCar", checkCar);
@@ -180,38 +181,40 @@ function updateSettings() {
   localStorage.setItem("stepRaccoon", stepRaccoon);
   localStorage.setItem("stepChicken", stepChicken);
   localStorage.setItem("eggStatus", eggStatus);
-  localStorage.setItem("isSetup",true);
+  localStorage.setItem("isSetup", true);
   location.reload();
 }
 function rangePosition(start, end) {
-  return Array(end - start + 1).fill().map((_, idx) => start + idx)
+  return Array(end - start + 1)
+    .fill()
+    .map((_, idx) => start + idx);
 }
 const initaliseValues = () => {
-  if(localStorage.getItem("isSetup") != null){
-    let checkRiver =(localStorage.getItem("checkRiver") ==='true');
-    let checkTruck  = (localStorage.getItem("checkTruck") ==='true');
-    let checkCar = (localStorage.getItem("checkCar") ==='true');
-    eggStatus = (localStorage.getItem("eggStatus") ==='true');
+  if (localStorage.getItem("isSetup") != null) {
+    let checkRiver = localStorage.getItem("checkRiver") === "true";
+    let checkTruck = localStorage.getItem("checkTruck") === "true";
+    let checkCar = localStorage.getItem("checkCar") === "true";
+    eggStatus = localStorage.getItem("eggStatus") === "true";
     botNumber = localStorage.getItem("botRaccoonSize");
     stepBot = localStorage.getItem("stepRaccoon");
     stepTime = localStorage.getItem("stepChicken");
     console.log(checkRiver);
     console.log(checkTruck);
     console.log(checkCar);
-    if(checkRiver == false){
+    if (checkRiver == false) {
       laneTypes.splice(laneTypes.indexOf("River_Lane_Fixed"), 1);
     }
-    if(checkCar  ==false){
+    if (checkCar == false) {
       laneTypes.splice(laneTypes.indexOf("Car_Lane"), 1);
     }
-    if(checkTruck == false){
+    if (checkTruck == false) {
       laneTypes.splice(laneTypes.indexOf("Truck_Lane"), 1);
     }
-    botPosition = rangePosition(1,botNumber);
+    botPosition = rangePosition(1, botNumber);
     console.log(laneTypes);
   }
+  eggPosition = [];
   lanes = generateLanes();
-
   currentLane = 0;
   currentColumn = Math.floor(columns / 2);
 
@@ -388,7 +391,7 @@ function Egg() {
   const egg = new THREE.Group();
   egg.name = "Egg";
   //THREE.SphereGeometry( 20,(chickenSize/4), 8 * zoom)
-  const shell = new THREE.Mesh( new THREE.SphereGeometry( 15, 32, 20), new THREE.MeshPhongMaterial({ color: 0xEEEE33, flatShading: true }));
+  const shell = new THREE.Mesh(new THREE.SphereGeometry(15, 32, 20), new THREE.MeshPhongMaterial({ color: 0xeeee33, flatShading: true }));
   shell.position.z = 10 * zoom;
   shell.castShadow = true;
   shell.receiveShadow = true;
@@ -557,13 +560,14 @@ function Lane(index) {
         this.mesh.add(tree);
         return tree;
       });
-      if(eggStatus) {
+      if (eggStatus) {
         this.egg = [1].map(() => {
           const egg = new Egg();
           let position;
           do {
             position = Math.floor(Math.random() * columns);
           } while (this.occupiedPositions.has(position));
+          eggPosition.push({ col: position, isPassed:false});
           egg.position.x = (position * positionWidth + positionWidth / 2) * zoom - (boardWidth * zoom) / 2;
           this.mesh.add(egg);
           return egg;
@@ -939,6 +943,8 @@ function animate(timestamp) {
     gameOver = true;
     winDOM.style.visibility = "visible";
   }
+  hitTestRaccoon();
+  hitEgg();
   // console.log(lanes);
   // console.log(tableItemsGlobal);
   tableItemsGlobal = refreshGrid2DObjek();
@@ -946,8 +952,28 @@ function animate(timestamp) {
   //console.log(raccoon);
   renderer.render(scene, camera);
 }
+function hitTestRaccoon(){
+  for (let i = 0; i <raccoonLane.length ; i++) {
+    for (let j = 0; j <raccoonColumn.length ; j++) {
+      if(raccoonLane[i] == currentLane && raccoonColumn[j] == currentColumn){
+        gameOver = true;
+        endDOM.style.visibility = "visible";
+        return;
+      }
+    }
+  }
+}
 
-
+function hitEgg(){
+  for (let i = 0; i < eggPosition.length ; i++) {
+    if(i+1 == currentLane && eggPosition[i].col == currentColumn && !eggPosition[i].isPassed){
+      console.log("Hit " + i+1 + " - " +  eggPosition[i] + " ?  " + lanes[i+1].egg);
+      lanes[i+1].mesh.remove(lanes[i+1].egg[0]);
+      delete lanes[i+1].egg;
+      eggPosition[i].isPassed = true;
+    }
+  }
+}
 function apiGameEngine() {
   let stat = !gameOver;
   //Print Stats from Console Log
@@ -1030,8 +1056,8 @@ function refreshGrid2DObjek() {
           break;
         }
       }
-      if(lanes[i].hasOwnProperty("egg")){
-        childLane = childLane.concat(lanes[i].egg) ;
+      if (lanes[i].hasOwnProperty("egg")) {
+        childLane = childLane.concat(lanes[i].egg);
       }
     }
     for (let j = 0; j < childLane.length; j++) {
@@ -1109,7 +1135,7 @@ function refreshGrid2DObjek() {
           tableItems[i][pos].isARoad = false;
           break;
         }
-        case "Egg":{
+        case "Egg": {
           tableItems[i][pos].isMoving = false;
           tableItems[i][pos].isDangerous = false;
           tableItems[i][pos].isAFood = true;
