@@ -61,7 +61,7 @@ onmessage = function (e) {
       console.log("No Reflex");
     }
   }
-  //return;
+
   const gridAStar = new Array(binaryTable.length);
   //Pre Proccessing Grid A Star
   for (let i = 0; i < binaryTable.length; i++) {
@@ -69,7 +69,7 @@ onmessage = function (e) {
     for (let j = 0; j < binaryTable[i].length; j++) {
       if (binaryTable[i][j] == 2) {
         tempGrid[j] = { wall: false, difficulty: 1 };
-      }else  if (binaryTable[i][j] == 1) {
+      } else if (binaryTable[i][j] == 1) {
         tempGrid[j] = { wall: false, difficulty: 5 };
       } else {
         tempGrid[j] = { wall: true, difficulty: 0 };
@@ -116,18 +116,16 @@ onmessage = function (e) {
     }
   }
   //console.log(itemData);
-  //loggingTable(itemData);
+  loggingTable(itemData);
   //console.log(currentPos);
 
   //Melakukan Eksekusi
   if (trajectoryDestination == undefined || trajectoryDestination.length == 0) {
-    console.log("Hold 122");
     postMessage(possibleMove.hold);
   }
   const nextStep = trajectoryDestination.pop();
   const order = executeOrder(nextStep, binaryTable);
   if (order == possibleMove.hold) {
-    console.log("Hold 128");
     trajectoryDestination = [];
   }
   postMessage(order);
@@ -156,7 +154,7 @@ function executeOrder(nextStep, binaryTable) {
   // Y = col
   if (nextStep.row > currentPos.row && binaryTable[nextStep.row][currentPos.col] > 0) {
     executeMessage = possibleMove.forward;
-  } else if (nextStep.row < currentPos.row && binaryTable[nextStep.row][currentPos.col] > 0 ) {
+  } else if (nextStep.row < currentPos.row && binaryTable[nextStep.row][currentPos.col] > 0) {
     executeMessage = possibleMove.backward;
   } else if (nextStep.col > currentPos.col && binaryTable[currentPos.row][nextStep.col] > 0) {
     executeMessage = possibleMove.right;
@@ -305,12 +303,12 @@ function chooseDestination(binaryTable = []) {
   }
   for (let i = currentPos.row + lookAHead; i > currentPos.row; i--) {
     for (let j = Math.round(binaryTable[i].length / 2); j < binaryTable[i].length; j++) {
-      if(binaryTable[i][j] == 2){
+      if (binaryTable[i][j] == 2) {
         let destination = { row: -1, col: -1 };
         destination.row = i;
         destination.col = j;
         arrDestination.unshift(destination);
-      }else if (binaryTable[i][j] == 1) {
+      } else if (binaryTable[i][j] == 1) {
         let destination = { row: -1, col: -1 };
         destination.row = i;
         destination.col = j;
@@ -318,12 +316,12 @@ function chooseDestination(binaryTable = []) {
       }
     }
     for (let j = 0; j < Math.round(binaryTable[i].length / 2); j++) {
-      if(binaryTable[i][j] == 2){
+      if (binaryTable[i][j] == 2) {
         let destination = { row: -1, col: -1 };
         destination.row = i;
         destination.col = j;
         arrDestination.unshift(destination);
-      }else if (binaryTable[i][j] == 1) {
+      } else if (binaryTable[i][j] == 1) {
         let destination = { row: -1, col: -1 };
         destination.row = i;
         destination.col = j;

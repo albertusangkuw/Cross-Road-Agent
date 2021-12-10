@@ -567,7 +567,7 @@ function Lane(index) {
           do {
             position = Math.floor(Math.random() * columns);
           } while (this.occupiedPositions.has(position));
-          eggPosition.push({ col: position, isPassed:false});
+          eggPosition.push({ row:index , col: position, isPassed:false});
           egg.position.x = (position * positionWidth + positionWidth / 2) * zoom - (boardWidth * zoom) / 2;
           this.mesh.add(egg);
           return egg;
@@ -966,10 +966,10 @@ function hitTestRaccoon(){
 
 function hitEgg(){
   for (let i = 0; i < eggPosition.length ; i++) {
-    if(i+1 == currentLane && eggPosition[i].col == currentColumn && !eggPosition[i].isPassed){
-      console.log("Hit " + i+1 + " - " +  eggPosition[i] + " ?  " + lanes[i+1].egg);
-      lanes[i+1].mesh.remove(lanes[i+1].egg[0]);
-      delete lanes[i+1].egg;
+    if(eggPosition[i].row == currentLane && eggPosition[i].col == currentColumn && !eggPosition[i].isPassed){
+      console.log("Hit " + eggPosition[i].row + " - " +  eggPosition[i].col + " ?  " + lanes[currentLane].egg);
+      lanes[currentLane].mesh.remove(lanes[currentLane].egg[0]);
+      delete lanes[currentLane].egg;
       eggPosition[i].isPassed = true;
     }
   }
