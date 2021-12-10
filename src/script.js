@@ -58,7 +58,7 @@ const positionWidth = 42;
 const columns = 17;
 const boardWidth = positionWidth * columns;
 
-const stepTime = 200; // Miliseconds it takes for the chicken to take a step forward, backward, left or right
+let stepTime = 200; // Miliseconds it takes for the chicken to take a step forward, backward, left or right
 
 let lanes;
 let currentLane;
@@ -154,16 +154,58 @@ backLight.position.set(200, 200, 50);
 backLight.castShadow = true;
 scene.add(backLight);
 
-//const laneTypes = ["Car_Lane", "Truck_Lane", "Forest_Lane", "River_Lane_Fixed"];
-const laneTypes = ["Forest_Lane", "Car_Lane"];
-const botNumber = 1;
-const botPosition = [2];
+let laneTypes = ["Forest_Lane", "Car_Lane", "Truck_Lane",  "River_Lane_Fixed"];
+//let laneTypes = ["Forest_Lane","Car_Lane" , "River_Lane_Fixed"];
+let botNumber = 1;
+let botPosition = [2];
+let stepBot = 600;
 const vehicleSize = { Car_Lane: 60, Truck_Lane: 105 };
 const laneSpeeds = [2, 2.5, 3];
 const vehicleColors = [0x428eff, 0xffef42, 0xff7b42, 0xff426b];
 const treeHeights = [20, 45, 60];
 let isRiverLastTime = false;
+function updateSettings() {
+   const checkRiver = document.getElementById("checkRiver").checked;
+   const checkTruck = document.getElementById("checkTruck").checked;
+   const checkCar = document.getElementById("checkCar").checked;
+   const botRaccoonSize = document.getElementById("botRaccoonSize").value;
+   const stepRaccoon = document.getElementById("stepRaccoon").value;
+   const stepChicken = document.getElementById("stepChicken").value;
+  localStorage.setItem("checkRiver", checkRiver);
+  localStorage.setItem("checkTruck", checkTruck);
+  localStorage.setItem("checkCar", checkCar);
+  localStorage.setItem("botRaccoonSize", botRaccoonSize);
+  localStorage.setItem("stepRaccoon", stepRaccoon);
+  localStorage.setItem("stepChicken", stepChicken);
+  localStorage.setItem("isSetup",true);
+  location.reload();
+}
+function rangePosition(start, end) {
+  return Array(end - start + 1).fill().map((_, idx) => start + idx)
+}
 const initaliseValues = () => {
+  if(localStorage.getItem("isSetup") != null){
+    let checkRiver =(localStorage.getItem("checkRiver") ==='true');
+    let checkTruck  = (localStorage.getItem("checkTruck") ==='true');
+    let checkCar = (localStorage.getItem("checkCar") ==='true');
+    botNumber = localStorage.getItem("botRaccoonSize");
+    stepBot = localStorage.getItem("stepRaccoon");
+    stepTime = localStorage.getItem("stepChicken");
+    console.log(checkRiver);
+    console.log(checkTruck);
+    console.log(checkCar);
+    if(checkRiver == false){
+      laneTypes.splice(laneTypes.indexOf("River_Lane_Fixed"), 1);
+    }
+    if(checkCar  ==false){
+      laneTypes.splice(laneTypes.indexOf("Car_Lane"), 1);
+    }
+    if(checkTruck == false){
+      laneTypes.splice(laneTypes.indexOf("Truck_Lane"), 1);
+    }
+    botPosition = rangePosition(1,botNumber);
+    console.log(laneTypes);
+  }
   lanes = generateLanes();
 
   currentLane = 0;
@@ -879,7 +921,7 @@ function animate(timestamp) {
 
 setInterval(() => {
   searchChickenGreedy();
-}, 500);
+}, stepBot);
 
 function searchChickenGreedy() {
   const possibleMove = { forward: "forward", backward: "backward", left: "left", right: "right" };
@@ -895,7 +937,7 @@ function searchChickenGreedy() {
         tempMatrix.push(3);
         target.row = i;
         target.col = j;
-      } else if (tableItemsGlobal[i][j].isARoad) {
+      } else if (tableItemsGlobal[i][j].isARoad && !tableItemsGlobal[i][j].isDangerous) {
         tempMatrix.push(1);
       } else {
         tempMatrix.push(0);
@@ -913,14 +955,13 @@ function searchChickenGreedy() {
       }
     }
   }
-  matrixRoad[target.row][target.col] = "T";
   for (let i = 0; i < raccoon.length; i++) {
     let sumber = { col: raccoonColumn[i], row: raccoonLane[i] };
     if (sumber.col < 0 || sumber.col >= columns) {
       continue;
     }
     matrixRoad[sumber.row][sumber.col] = "R";
-    const choice = getBorderValue(matrixRoad, { row: sumber.row, col: sumber.col });
+    const choice = getBorderValue(matrixRoad, { row: sumber.row, col: sumber.col },{ row: target.row, col: target.col });
     const minVar = getMinimumValueBorder(choice);
     let executeMessage = "";
     if (minVar === "bottom") {
@@ -938,8 +979,24 @@ function searchChickenGreedy() {
     raccoonMove(executeMessage, i);
   }
 }
-function getBorderValue(array = [[]], idx = { row: -1, col: -1 }) {
+function getBorderValue(array = [[]], idx = { row: -1, col: -1 },target) {
   const borderVal = { top: 0, bottom: 0, left: 0, right: 0 };
+  if(idx.row + 1 == target.row && idx.col == target.col){
+    borderVal.bottom = 1;
+    return  borderVal;
+  }
+  if(idx.row - 1 == target.row && idx.col == target.col){
+    borderVal.top = 1;
+    return  borderVal;
+  }
+  if(idx.row == target.row && idx.col+1 == target.col){
+    borderVal.right = 1;
+    return  borderVal;
+  }
+  if(idx.row == target.row && idx.col-1 == target.col){
+    borderVal.left = 1;
+    return  borderVal;
+  }
   if (idx.row + 1 < array.length) {
     borderVal.bottom = array[idx.row + 1][idx.col];
   }
@@ -956,32 +1013,12 @@ function getBorderValue(array = [[]], idx = { row: -1, col: -1 }) {
 }
 function getMinimumValueBorder(borderVal = { top: 0, bottom: 0, left: 0, right: 0 }) {
   let variabelMin = "top";
-  let minimumVal = borderVal.top;
-  //Init
-  if (minimumVal == 0) {
-    variabelMin = "bottom";
-    minimumVal = minimumVal.bottom;
-  }
-  if (minimumVal == 0) {
-    variabelMin = "left";
-    minimumVal = minimumVal.left;
-  }
-  if (minimumVal == 0) {
-    variabelMin = "right";
-    minimumVal = minimumVal.right;
-  }
-
-  if (minimumVal > borderVal.bottom && borderVal.bottom != 0) {
-    variabelMin = "bottom";
-    minimumVal = borderVal.bottom;
-  }
-  if (minimumVal > borderVal.left && borderVal.left != 0) {
-    variabelMin = "left";
-    minimumVal = borderVal.left;
-  }
-  if (minimumVal > borderVal.right && borderVal.right != 0) {
-    variabelMin = "right";
-    minimumVal = borderVal.right;
+  let minimumVal = 99;
+  for (const property in borderVal) {
+    if(borderVal[property] != 0 && borderVal[property] < minimumVal){
+      variabelMin = property;
+      minimumVal = borderVal[property];
+    }
   }
   return variabelMin;
 }
